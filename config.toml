@@ -1,0 +1,119 @@
+# nuedc2025-c-generator 配置文件
+# 2025年全国大学生电子设计竞赛C题 — 基于单目视觉的目标物测量装置
+
+# ===== 页面设置 =====
+[page]
+width_mm = 210              # A4 宽度 (mm)
+height_mm = 297             # A4 高度 (mm)
+margin_mm = 20              # 黑色边框宽度 (mm), C题要求 2cm
+safe_margin_mm = 5          # 白色区域内安全边距 (mm)
+
+# ===== 基本目标物（圆形/三角形/正方形，单个居中） =====
+[basic_target]
+enable = true               # 是否生成基本目标物
+min_size_mm = 100           # 最小边长/直径 (mm), C题要求 10cm
+max_size_mm = 160           # 最大边长/直径 (mm), C题要求 16cm
+step_mm = 5                 # 尺寸间隔 (mm)
+output_dir = "output/basic_targets"
+
+# ===== 发挥目标物（多个正方形组合 + 数字） =====
+#
+# 难度级别说明:
+#   difficulty = 0 (简单)
+#     - 正方形数量: 1-3个
+#     - 旋转: 无 (角度固定为0°)
+#     - 重叠: 无 (正方形之间保持 gap_mm 间距)
+#     - 布局: 平均分布于页面 (网格排列)
+#
+#   difficulty = 1 (中等)
+#     - 正方形数量: 2-4个
+#     - 旋转: 无 (角度固定为0°)
+#     - 重叠: 最多允许1对正方形重叠
+#     - 布局: 随机放置, 非重叠正方形保持 gap_mm 间距
+#
+#   difficulty = 2 (困难)
+#     - 正方形数量: 3-5个
+#     - 旋转: 随机 (0°-360°)
+#     - 重叠: 允许 (需满足可检测性: 至少2条边+1个角可见)
+#     - 布局: 随机放置
+#
+[extended_target]
+enable = true               # 是否生成发挥目标物
+output_dir = "output"       # 输出根目录
+difficulty = 1              # 难度级别: 0=简单, 1=中等(官方标准), 2=困难
+total_files = 50            # 生成图片总数
+digits_per_square = true    # 是否为每个正方形分配数字 (0-9)
+
+[extended_target.square]
+min_size_mm = 60            # 正方形最小边长 (mm), C题要求 6cm
+max_size_mm = 120           # 正方形最大边长 (mm), C题要求 12cm
+gap_mm = 10                 # 不重叠时的最小间距 (mm), 仅难度0和1生效
+
+[extended_target.digit]
+font_size = 30              # 数字字体大小 (SVG 单位)
+overlap_threshold_mm = 40   # 数字中心最小间距 (mm), 防止数字重叠
+
+[extended_target.font]
+enable_bold = false         # 是否生成加粗字体样本
+bold_probability = 0.3      # 每个数字的加粗概率 (enable_bold=true时生效)
+enable_multi_font = false   # 是否启用多字体 (关闭时仅使用 Times New Roman)
+font_files = ["fonts/times.ttf", "fonts/arial.ttf", "fonts/consolas.ttf"]  # 本地字体文件路径
+
+# 字体权重 (enable_multi_font=true 时生效, 总和应为1.0)
+[extended_target.font.weights]
+"Times New Roman" = 0.6
+Arial = 0.2
+Consolas = 0.2
+
+# ===== C 题标准模式（恰好4类发挥目标物） =====
+#
+# 4 类发挥目标物:
+#   type1_single  — 单个正方形，无数字，无旋转（简单，少量生成）
+#   type2_multi   — 多正方形组合，无数字，无旋转
+#   type3_digit   — 多正方形 + 数字编号，无旋转
+#   type4_rotated — 单个正方形，随机旋转
+#
+[c_exam]
+enable = true
+output_dir = "output/c_exam"
+
+[c_exam.type1_single]
+count = 1
+total_files = 3
+generate_digits = false
+allow_overlap = false
+allow_rotation = false
+
+[c_exam.type2_multi]
+count_min = 2
+count_max = 4
+total_files = 5
+generate_digits = false
+allow_overlap = true
+allow_rotation = false
+
+[c_exam.type3_digit]
+count_min = 2
+count_max = 4
+total_files = 5
+generate_digits = true
+allow_overlap = true
+allow_rotation = false
+
+[c_exam.type4_rotated]
+count = 1
+total_files = 5
+generate_digits = false
+allow_overlap = false
+allow_rotation = true
+
+# ===== 数据集导出 =====
+[export]
+png_size = 60               # 裁剪 PNG 尺寸 (px)
+enable_digit_export = false # 是否生成数字裁剪 PNG 数据集
+
+[export.noise]
+enable = false              # 是否生成噪声裁剪
+count = 4                   # 每张图噪声裁剪数
+overlap_threshold = 0.4     # 允许最大正方形重叠比例 (0-1)
+crop_size_mm = 50.0         # 裁剪区域边长 (mm)
