@@ -1,4 +1,209 @@
 # nuedc2025-c-generator
-A simple tool for generating standardized test patterns for the 2025 National Undergraduate Electronic Design Contest Competition C problem.
 
-使用前需安装 Times New Roman 字体。
+2025年全国大学生电子设计竞赛C题 — 基于单目视觉的目标物测量装置 — 标准化测试图案生成器。
+
+生成A4尺寸（210×297mm）的SVG/PDF测试图案，用于系统调试和训练数据集生成。
+
+> 2025电赛C题国一。用来生成调试用的目标物图案。
+
+## 功能
+
+### 基本目标物
+
+白色A4纸中心印制单个黑色实心几何图形，边长/直径 100-160mm：
+
+| 图形 | 尺寸范围 | 数量 |
+|------|----------|------|
+| 圆形 | 100-160mm，每5mm | 13个 |
+| 等边三角形 | 100-160mm，每5mm | 13个 |
+| 正方形 | 100-160mm，每5mm | 13个 |
+
+### C题标准发挥目标物（4类）
+
+按C题官方规格生成恰好4类发挥目标物：
+
+| 类型 | 说明 | 正方形 | 数字 | 旋转 |
+|------|------|--------|------|------|
+| type1_single | 单个正方形 | 1个 | 无 | 无 |
+| type2_multi | 多正方形组合 | 2-4个 | 无 | 无 |
+| type3_digit | 带数字编号 | 2-4个 | 有(0-9) | 无 |
+| type4_rotated | 旋转测量 | 1个 | 无 | 随机0-360° |
+
+正方形边长范围：60-120mm（C题要求6-12cm）。
+
+### 批量训练数据集
+
+按难度级别批量生成，用于视觉算法训练：
+
+| 难度 | 正方形数量 | 旋转 | 重叠 |
+|------|-----------|------|------|
+| 0 简单 | 1-3个 | 无 | 无，网格排列 |
+| 1 中等 | 2-4个 | 无 | 最多1对，重叠≤30% |
+| 2 困难 | 3-5个 | 随机 | 允许，需可检测（≥2条边+1个角可见） |
+
+## 安装
+
+需要 Python ≥ 3.12。
+
+```bash
+# 克隆仓库
+git clone https://github.com/Sylvan-Cheng/nuedc2025-c-generator.git
+cd nuedc2025-c-generator
+
+# 安装依赖
+uv sync
+```
+
+## 使用
+
+```bash
+# 通过 uv 运行（推荐）
+uv run nuedc-gen
+
+# 或直接运行模块
+uv run python -m nuedc_gen
+```
+
+### 输出目录结构
+
+```
+output/
+├── basic_targets/          ← 基本目标物（3种图形 × 13个尺寸 = 39个文件）
+│   ├── circle/svg/  circle/pdf/
+│   ├── triangle/svg/  triangle/pdf/
+│   └── square/svg/  square/pdf/
+├── c_exam/                 ← C题标准发挥目标物（4类，共18个文件）
+│   ├── type1_single/svg/  type1_single/pdf/
+│   ├── type2_multi/svg/   type2_multi/pdf/
+│   ├── type3_digit/svg/   type3_digit/pdf/
+│   └── type4_rotated/svg/ type4_rotated/pdf/
+└── svg/  pdf/              ← 批量训练数据集（默认50个文件）
+```
+
+每个SVG文件对应一个同名PDF文件。
+
+## 配置
+
+所有配置在 `config.toml`，运行时自动从项目根目录加载。
+
+### 页面设置
+
+```toml
+[page]
+width_mm = 210        # A4 宽度 (mm)
+height_mm = 297       # A4 高度 (mm)
+margin_mm = 20        # 黑色边框宽度 (mm)，C题要求 2cm
+safe_margin_mm = 5    # 白色区域内安全边距 (mm)
+```
+
+### 基本目标物
+
+```toml
+[basic_target]
+enable = true
+min_size_mm = 100     # 最小边长/直径 (mm)
+max_size_mm = 160     # 最大边长/直径 (mm)
+step_mm = 5           # 尺寸间隔 (mm)
+```
+
+### 发挥目标物（批量模式）
+
+```toml
+[extended_target]
+difficulty = 1        # 0=简单, 1=中等, 2=困难
+total_files = 50      # 生成图片总数
+
+[extended_target.square]
+min_size_mm = 60      # 正方形最小边长 (mm)
+max_size_mm = 120     # 正方形最大边长 (mm)
+gap_mm = 10           # 不重叠时的最小间距 (mm)
+
+[extended_target.digit]
+font_size = 30        # 数字字体大小
+overlap_threshold_mm = 40  # 数字中心最小间距 (mm)
+
+[extended_target.font]
+enable_bold = false   # 是否生成加粗字体样本
+enable_multi_font = false  # 是否启用多字体
+```
+
+### C题标准模式
+
+```toml
+[c_exam]
+enable = true
+output_dir = "output/c_exam"
+
+[c_exam.type1_single]   # 单个正方形
+count = 1
+total_files = 3
+
+[c_exam.type2_multi]    # 多正方形组合
+count_min = 2
+count_max = 4
+total_files = 5
+
+[c_exam.type3_digit]    # 带数字编号
+count_min = 2
+count_max = 4
+total_files = 5
+generate_digits = true
+
+[c_exam.type4_rotated]  # 单个正方形，随机旋转
+count = 1
+total_files = 5
+allow_rotation = true
+```
+
+### 数据集导出
+
+```toml
+[export]
+png_size = 60              # 裁剪 PNG 尺寸 (px)
+enable_digit_export = false  # 是否生成数字裁剪 PNG
+
+[export.noise]
+enable = false             # 是否生成噪声裁剪
+count = 4                  # 每张图噪声裁剪数
+overlap_threshold = 0.4    # 允许最大正方形重叠比例
+crop_size_mm = 50.0        # 裁剪区域边长 (mm)
+```
+
+## 项目结构
+
+```
+src/nuedc_gen/
+├── __init__.py
+├── __main__.py       — 入口，生成循环
+├── config.py         — 配置加载 + 数据类型 + 字体选择
+├── geometry.py       — Square 类 + 几何算法（碰撞检测、可检测性判断）
+├── digit.py          — 数字分配（6/9互斥、重叠检测）
+├── placement.py      — 正方形布局策略（easy/medium/hard + C题标准）
+├── renderer.py       — SVG 构建（背景、正方形、数字、基本图形）
+├── export.py         — SVG→PNG/PDF 导出
+└── basic_target.py   — 基本目标物生成
+```
+
+### 模块依赖
+
+```
+__main__ → config, placement, renderer, export, basic_target
+placement → config, geometry, digit
+renderer → config, geometry, digit
+export → config, geometry, digit
+digit → config
+geometry → (无依赖)
+```
+
+## 依赖
+
+| 包 | 用途 |
+|----|------|
+| svgwrite | SVG 生成 |
+| resvg-py | SVG→PNG 渲染 |
+| svglib + reportlab | SVG→PDF 转换 |
+| rich | 进度条显示 |
+
+## License
+
+MIT
