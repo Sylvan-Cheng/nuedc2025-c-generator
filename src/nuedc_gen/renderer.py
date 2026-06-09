@@ -65,7 +65,7 @@ def add_digits_to_svg(
             text_anchor="middle",
             fill="white",
         )
-        text_elem.attribs["dy"] = "0.35em"
+        text_elem.attribs["dominant-baseline"] = "central"
         text_elem.attribs["transform"] = (
             f"translate({info.center_x - info.size / 2} {info.center_y - info.size / 2}) "
             f"rotate({info.rotation} {info.size / 2} {info.size / 2})"

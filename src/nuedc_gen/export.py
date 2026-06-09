@@ -25,7 +25,6 @@ def crop_svg_to_png(
     viewbox_y: float,
     viewbox_w: float,
     viewbox_h: float,
-    page_cfg: PageConfig,
     output_path: str,
     output_px: int = 60,
 ) -> bool:
@@ -52,7 +51,6 @@ def crop_svg_to_png(
 def export_digit_pngs(
     dwg: svgwrite.Drawing,
     digits: list[DigitInfo],
-    page_cfg: PageConfig,
     export_cfg: ExportConfig,
     output_dir: str = "output",
 ) -> None:
@@ -70,7 +68,6 @@ def export_digit_pngs(
             info.center_y - half_crop,
             crop_size,
             crop_size,
-            page_cfg,
             png_path,
             export_cfg.png_size,
         )
@@ -130,7 +127,6 @@ def export_noise_pngs(
             full_svg,
             cx - half_crop, cy - half_crop,
             noise_cfg.crop_size_mm, noise_cfg.crop_size_mm,
-            page_cfg,
             png_path,
             export_cfg.png_size,
         )
