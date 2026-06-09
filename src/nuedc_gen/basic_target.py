@@ -11,6 +11,7 @@ from .renderer import render_basic_target
 def generate_basic_targets(
     page_cfg: PageConfig,
     basic_cfg: BasicTargetConfig,
+    output_dir: str,
 ) -> None:
     """生成三种基本目标物：圆形、三角形、正方形。
 
@@ -24,7 +25,7 @@ def generate_basic_targets(
     count = 0
 
     for shape in shapes:
-        shape_dir = os.path.join(basic_cfg.output_dir, shape.value)
+        shape_dir = os.path.join(output_dir, shape.value)
         os.makedirs(os.path.join(shape_dir, "svg"), exist_ok=True)
         os.makedirs(os.path.join(shape_dir, "pdf"), exist_ok=True)
 

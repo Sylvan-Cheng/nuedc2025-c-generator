@@ -1,6 +1,12 @@
 # nuedc2025-c-generator 配置文件
 # 2025年全国大学生电子设计竞赛C题 — 基于单目视觉的目标物测量装置
 
+#其中难度设置，中等难度为国赛时实际难度
+
+# ===== 全局配置 =====
+[global]
+output_dir = "output"        # 全局输出目录
+
 # ===== 页面设置 =====
 [page]
 width_mm = 210              # A4 宽度 (mm)
@@ -8,13 +14,33 @@ height_mm = 297             # A4 高度 (mm)
 margin_mm = 20              # 黑色边框宽度 (mm), C题要求 2cm
 safe_margin_mm = 5          # 白色区域内安全边距 (mm)
 
+# ===== 字体配置 =====
+[fonts]
+paths = ["fonts/times.ttf", "fonts/arial.ttf", "fonts/consolas.ttf"]  # 字体文件路径
+enable_bold = false         # 是否生成加粗字体样本
+bold_probability = 0.3      # 每个数字的加粗概率 (enable_bold=true时生效)
+enable_multi_font = false   # 是否启用多字体 (关闭时仅使用第一个字体)
+
+# 字体权重 (enable_multi_font=true 时生效, 总和应为1.0)
+[fonts.weights]
+"Times New Roman" = 0.6
+Arial = 0.2
+Consolas = 0.2
+
+# ===== 数据增强配置 =====
+[augment]
+enable = true               # 是否启用数据增强
+rotation_range = 5.0        # 旋转范围 (度)
+brightness_range = [0.9, 1.1]  # 亮度范围
+contrast_range = [0.9, 1.1]    # 对比度范围
+noise_std = 0.005           # 高斯噪声标准差
+
 # ===== 基本目标物（圆形/三角形/正方形，单个居中） =====
 [basic_target]
 enable = true               # 是否生成基本目标物
 min_size_mm = 100           # 最小边长/直径 (mm), C题要求 10cm
 max_size_mm = 160           # 最大边长/直径 (mm), C题要求 16cm
 step_mm = 5                 # 尺寸间隔 (mm)
-output_dir = "output/basic_targets"
 
 # ===== 发挥目标物（多个正方形组合 + 数字） =====
 #
@@ -39,9 +65,8 @@ output_dir = "output/basic_targets"
 #
 [extended_target]
 enable = true               # 是否生成发挥目标物
-output_dir = "output"       # 输出根目录
-difficulty = 1              # 难度级别: 0=简单, 1=中等(官方标准), 2=困难
-total_files = 50            # 生成图片总数
+difficulty = 2              # 难度级别: 0=简单, 1=中等(官方标准), 2=困难
+total_files = 500           # 生成图片总数
 digits_per_square = true    # 是否为每个正方形分配数字 (0-9)
 
 [extended_target.square]
@@ -53,18 +78,6 @@ gap_mm = 10                 # 不重叠时的最小间距 (mm), 仅难度0和1�
 font_size = 30              # 数字字体大小 (SVG 单位)
 overlap_threshold_mm = 40   # 数字中心最小间距 (mm), 防止数字重叠
 
-[extended_target.font]
-enable_bold = false         # 是否生成加粗字体样本
-bold_probability = 0.3      # 每个数字的加粗概率 (enable_bold=true时生效)
-enable_multi_font = false   # 是否启用多字体 (关闭时仅使用 Times New Roman)
-font_files = ["fonts/times.ttf", "fonts/arial.ttf", "fonts/consolas.ttf"]  # 本地字体文件路径
-
-# 字体权重 (enable_multi_font=true 时生效, 总和应为1.0)
-[extended_target.font.weights]
-"Times New Roman" = 0.6
-Arial = 0.2
-Consolas = 0.2
-
 # ===== C 题标准模式（恰好4类发挥目标物） =====
 #
 # 4 类发挥目标物:
@@ -75,7 +88,6 @@ Consolas = 0.2
 #
 [c_exam]
 enable = true
-output_dir = "output/c_exam"
 
 [c_exam.type1_single]
 count = 1
@@ -117,3 +129,18 @@ enable = false              # 是否生成噪声裁剪
 count = 4                   # 每张图噪声裁剪数
 overlap_threshold = 0.4     # 允许最大正方形重叠比例 (0-1)
 crop_size_mm = 50.0         # 裁剪区域边长 (mm)
+
+# ===== YOLO数据集导出 =====
+[yolo_export]
+enable = true               # 是否生成YOLO数据集
+train_ratio = 0.8           # 训练集比例
+val_ratio = 0.15            # 验证集比例
+test_ratio = 0.05           # 测试集比例
+
+[yolo_export.digit]
+image_sizes = [64, 128, 256]  # 多尺度裁切 (px)
+digit_size_ratio_min = 0.25  # 数字占正方形比例最小 25%
+digit_size_ratio_max = 0.5   # 数字占正方形比例最大 50%
+square_ratio = 0.8           # 正方形占图片比例 80%
+cv_noise_level = 5           # CV裁切误差 (像素)
+samples_per_digit = 1000     # 每类数字样本数

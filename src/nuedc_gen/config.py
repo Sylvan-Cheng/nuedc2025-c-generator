@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 import tomllib
 from dataclasses import dataclass, field
@@ -45,6 +46,20 @@ class Difficulty(IntEnum):
         return {0: 3, 1: 4, 2: 5}[self.value]
 
 
+# ===== 全局配置 =====
+
+@dataclass(frozen=True)
+class GlobalConfig:
+    output_dir: str = "output"
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> GlobalConfig:
+        global_cfg = raw.get("global", {})
+        return cls(
+            output_dir=global_cfg.get("output_dir", "output"),
+        )
+
+
 # ===== 页面配置 =====
 
 @dataclass(frozen=True)
@@ -70,14 +85,6 @@ class PageConfig:
     def inner_height(self) -> float:
         return self.height_mm - 2 * self.margin - 2 * self.safe_margin
 
-    def random_x(self, size: float) -> float:
-        """在白色区域内随机生成一个 x 坐标（正方形左上角）"""
-        return random.uniform(self.inner_x, self.width_mm - self.margin - self.safe_margin - size)
-
-    def random_y(self, size: float) -> float:
-        """在白色区域内随机生成一个 y 坐标（正方形左上角）"""
-        return random.uniform(self.inner_y, self.height_mm - self.margin - self.safe_margin - size)
-
     @classmethod
     def from_raw(cls, raw: dict) -> PageConfig:
         pg = raw["page"]
@@ -97,7 +104,6 @@ class BasicTargetConfig:
     min_size_mm: int = 100
     max_size_mm: int = 160
     step_mm: int = 5
-    output_dir: str = "output/basic_targets"
 
     @classmethod
     def from_raw(cls, raw: dict) -> BasicTargetConfig:
@@ -107,7 +113,6 @@ class BasicTargetConfig:
             min_size_mm=cfg["min_size_mm"],
             max_size_mm=cfg["max_size_mm"],
             step_mm=cfg["step_mm"],
-            output_dir=cfg["output_dir"],
         )
 
 
@@ -179,15 +184,15 @@ class FontConfig:
     bold_probability: float = 0.3
     enable_bold: bool = False
     enable_multi_font: bool = False
-    font_files: tuple[str, ...] = ()
+    font_paths: tuple[str, ...] = ()
 
     @classmethod
     def from_raw(cls, raw: dict) -> FontConfig:
-        font_raw = raw["extended_target"]["font"]
+        font_raw = raw.get("fonts", {})
         enable_multi = font_raw.get("enable_multi_font", False)
         enable_bold = font_raw.get("enable_bold", False)
         bold_prob = font_raw.get("bold_probability", 0.3)
-        font_files = tuple(font_raw.get("font_files", []))
+        font_paths = tuple(font_raw.get("paths", []))
 
         if enable_multi:
             raw_weights = font_raw.get("weights", {})
@@ -201,7 +206,7 @@ class FontConfig:
             bold_probability=bold_prob,
             enable_bold=enable_bold,
             enable_multi_font=enable_multi,
-            font_files=font_files,
+            font_paths=font_paths,
         )
 
 
@@ -230,13 +235,57 @@ class FontSelector:
         suffix = "_Bold" if use_bold else ""
         return f"{entry.folder_name}{suffix}"
 
+    @staticmethod
+    def load_pil_font(font_size: int, cfg: FontConfig):
+        from PIL import ImageFont
+
+        _, entry = FontSelector.choose_font(cfg)
+        font_path = entry.font_file
+
+        if os.path.exists(font_path):
+            try:
+                return ImageFont.truetype(font_path, font_size)
+            except Exception:
+                pass
+
+        for entry in cfg.configs.values():
+            if os.path.exists(entry.font_file):
+                try:
+                    return ImageFont.truetype(entry.font_file, font_size)
+                except Exception:
+                    continue
+
+        return ImageFont.load_default()
+
+
+# ===== 数据增强配置 =====
+
+@dataclass(frozen=True)
+class AugmentConfig:
+    """全局数据增强配置"""
+    enable: bool = True
+    rotation_range: float = 5.0
+    brightness_range: tuple[float, float] = (0.9, 1.1)
+    contrast_range: tuple[float, float] = (0.9, 1.1)
+    noise_std: float = 0.005
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> AugmentConfig:
+        aug = raw.get("augment", {})
+        return cls(
+            enable=aug.get("enable", True),
+            rotation_range=aug.get("rotation_range", 5.0),
+            brightness_range=tuple(aug.get("brightness_range", [0.9, 1.1])),
+            contrast_range=tuple(aug.get("contrast_range", [0.9, 1.1])),
+            noise_std=aug.get("noise_std", 0.005),
+        )
+
 
 # ===== 发挥目标物总配置 =====
 
 @dataclass(frozen=True)
 class ExtendedTargetConfig:
     enable: bool = True
-    output_dir: str = "output"
     difficulty: Difficulty = Difficulty.MEDIUM
     total_files: int = 50
     digits_per_square: bool = True
@@ -256,7 +305,6 @@ class ExtendedTargetConfig:
         ext = raw["extended_target"]
         return cls(
             enable=ext["enable"],
-            output_dir=ext["output_dir"],
             difficulty=Difficulty(ext["difficulty"]),
             total_files=ext["total_files"],
             digits_per_square=ext.get("digits_per_square", True),
@@ -290,7 +338,6 @@ class CExamTypeConfig:
 @dataclass(frozen=True)
 class CExamConfig:
     enable: bool = False
-    output_dir: str = "output/c_exam"
     type1_single: CExamTypeConfig = field(default_factory=lambda: CExamTypeConfig(count=1, total_files=3))
     type2_multi: CExamTypeConfig = field(default_factory=lambda: CExamTypeConfig(count_min=2, count_max=4, total_files=5, allow_overlap=True))
     type3_digit: CExamTypeConfig = field(default_factory=lambda: CExamTypeConfig(count_min=2, count_max=4, total_files=5, generate_digits=True, allow_overlap=True))
@@ -318,7 +365,6 @@ class CExamConfig:
 
         return cls(
             enable=ce.get("enable", False),
-            output_dir=ce.get("output_dir", "output/c_exam"),
             type1_single=_parse_type("type1_single", {"count": 1, "total_files": 3}),
             type2_multi=_parse_type("type2_multi", {"count_min": 2, "count_max": 4, "total_files": 5, "allow_overlap": True}),
             type3_digit=_parse_type("type3_digit", {"count_min": 2, "count_max": 4, "total_files": 5, "generate_digits": True, "allow_overlap": True}),
@@ -337,6 +383,53 @@ class ExportConfig:
     def from_raw(cls, raw: dict) -> ExportConfig:
         exp = raw["export"]
         return cls(png_size=exp["png_size"], enable_digit_export=exp["enable_digit_export"])
+
+
+@dataclass(frozen=True)
+class YoloDigitConfig:
+    """YOLO数字裁剪配置"""
+    image_sizes: tuple[int, ...] = (64, 128, 256)
+    digit_size_ratio_min: float = 0.25
+    digit_size_ratio_max: float = 0.5
+    square_ratio: float = 0.8
+    cv_noise_level: int = 5
+    samples_per_digit: int = 1000
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> YoloDigitConfig:
+        digit_raw = raw.get("yolo_export", {}).get("digit", {})
+        return cls(
+            image_sizes=tuple(digit_raw.get("image_sizes", [64, 128, 256])),
+            digit_size_ratio_min=digit_raw.get("digit_size_ratio_min", 0.25),
+            digit_size_ratio_max=digit_raw.get("digit_size_ratio_max", 0.5),
+            square_ratio=digit_raw.get("square_ratio", 0.8),
+            cv_noise_level=digit_raw.get("cv_noise_level", 5),
+            samples_per_digit=digit_raw.get("samples_per_digit", 1000),
+        )
+
+
+@dataclass(frozen=True)
+class YoloExportConfig:
+    """YOLO数据集导出配置"""
+    enable: bool = False
+    train_ratio: float = 0.8
+    val_ratio: float = 0.15
+    test_ratio: float = 0.05
+    digit: YoloDigitConfig = field(default_factory=YoloDigitConfig)
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> YoloExportConfig:
+        if "yolo_export" not in raw:
+            return cls()
+        yolo = raw["yolo_export"]
+
+        return cls(
+            enable=yolo.get("enable", False),
+            train_ratio=yolo.get("train_ratio", 0.8),
+            val_ratio=yolo.get("val_ratio", 0.15),
+            test_ratio=yolo.get("test_ratio", 0.05),
+            digit=YoloDigitConfig.from_raw(raw),
+        )
 
 
 @dataclass(frozen=True)
