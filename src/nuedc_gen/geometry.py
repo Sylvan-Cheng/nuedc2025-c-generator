@@ -7,6 +7,7 @@ from enum import Enum
 
 class ShapeType(Enum):
     """基本目标物图形类型"""
+
     SQUARE = "square"
     CIRCLE = "circle"
     TRIANGLE = "triangle"
@@ -84,9 +85,7 @@ def point_in_square(px: float, py: float, square: Square) -> bool:
     for i in range(len(corners)):
         xi, yi = corners[i]
         xj, yj = corners[j]
-        if ((yi > py) != (yj > py)) and (
-            px < (xj - xi) * (py - yi) / (yj - yi) + xi
-        ):
+        if ((yi > py) != (yj > py)) and (px < (xj - xi) * (py - yi) / (yj - yi) + xi):
             inside = not inside
         j = i
     return inside
@@ -107,9 +106,7 @@ def edge_intersect_with_squares(
     return False
 
 
-def is_square_detectable(
-    square: Square, all_squares: list[Square], index: int
-) -> bool:
+def is_square_detectable(square: Square, all_squares: list[Square], index: int) -> bool:
     """判断正方形是否可检测：至少 2 条边 + 1 个角可见。
 
     边可见 = 不与其它正方形边相交 AND 边中点不在其它正方形内部。

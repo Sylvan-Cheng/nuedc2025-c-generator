@@ -22,5 +22,10 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/nuedc_gen"]
 
+[dependency-groups]
+dev = [
+    "ruff>=0.15.16",
+]
+
 [project.scripts]
 nuedc-gen = "nuedc_gen.__main__:main"

@@ -83,8 +83,12 @@ def _generate_digit_image(
 
     # 2. 计算正方形区域（带随机偏移，模拟CV检测误差）
     square_size = int(large_size * square_ratio)
-    square_x = (large_size - square_size) // 2 + random.randint(-cv_noise_level, cv_noise_level)
-    square_y = (large_size - square_size) // 2 + random.randint(-cv_noise_level, cv_noise_level)
+    square_x = (large_size - square_size) // 2 + random.randint(
+        -cv_noise_level, cv_noise_level
+    )
+    square_y = (large_size - square_size) // 2 + random.randint(
+        -cv_noise_level, cv_noise_level
+    )
 
     # 确保正方形在图像内
     square_x = max(0, min(square_x, large_size - square_size))
@@ -93,12 +97,14 @@ def _generate_digit_image(
     # 3. 绘制黑色正方形
     draw.rectangle(
         [square_x, square_y, square_x + square_size, square_y + square_size],
-        fill=(0, 0, 0)
+        fill=(0, 0, 0),
     )
 
     # 4. 计算数字大小（相对于正方形）
     digit_size = int(square_size * digit_size_ratio)
-    font = FontSelector.load_pil_font(digit_size, font_cfg if font_cfg else FontConfig())
+    font = FontSelector.load_pil_font(
+        digit_size, font_cfg if font_cfg else FontConfig()
+    )
 
     # 5. 计算文字边界框
     bbox = draw.textbbox((0, 0), str(digit), font=font)
@@ -193,8 +199,12 @@ def _generate_noise_image(
 
     # 2. 计算正方形区域（带随机偏移，模拟CV检测误差）
     square_size = int(large_size * square_ratio)
-    square_x = (large_size - square_size) // 2 + random.randint(-cv_noise_level, cv_noise_level)
-    square_y = (large_size - square_size) // 2 + random.randint(-cv_noise_level, cv_noise_level)
+    square_x = (large_size - square_size) // 2 + random.randint(
+        -cv_noise_level, cv_noise_level
+    )
+    square_y = (large_size - square_size) // 2 + random.randint(
+        -cv_noise_level, cv_noise_level
+    )
 
     # 确保正方形在图像内
     square_x = max(0, min(square_x, large_size - square_size))
@@ -203,7 +213,7 @@ def _generate_noise_image(
     # 3. 绘制黑色正方形（无数字）
     draw.rectangle(
         [square_x, square_y, square_x + square_size, square_y + square_size],
-        fill=(0, 0, 0)
+        fill=(0, 0, 0),
     )
 
     # 4. 模拟CV裁切（带误差）
@@ -288,7 +298,9 @@ def generate_yolo_dataset(
     samples_per_digit = digit_cfg.samples_per_digit
 
     print(f"[bold cyan]=== 生成YOLO数据集 ({samples_per_digit}张/数字) ===[/bold cyan]")
-    print(f"  模拟CV裁切图像，多尺度 {image_sizes}，数字占正方形 {ratio_min*100:.0f}%-{ratio_max*100:.0f}%，正方形占图片 {square_ratio*100:.0f}%")
+    print(
+        f"  模拟CV裁切图像，多尺度 {image_sizes}，数字占正方形 {ratio_min * 100:.0f}%-{ratio_max * 100:.0f}%，正方形占图片 {square_ratio * 100:.0f}%"
+    )
     print(f"  数字位置随机，CV裁切误差 ±{cv_noise_level}px，光照变化，多字体")
 
     # 生成数字样本
@@ -318,7 +330,15 @@ def generate_yolo_dataset(
             base_name = f"digit_{digit}_{i:04d}"
             bboxes = [(digit, *bbox)]
 
-            _save_yolo_sample(yolo_dataset_dir, split, base_name, img, bboxes, augment_cfg, augment=True)
+            _save_yolo_sample(
+                yolo_dataset_dir,
+                split,
+                base_name,
+                img,
+                bboxes,
+                augment_cfg,
+                augment=True,
+            )
             count += 1
 
         print(f"完成 ({count}张)")

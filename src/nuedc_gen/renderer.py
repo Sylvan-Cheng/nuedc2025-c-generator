@@ -15,21 +15,25 @@ def create_background(page_cfg: PageConfig, filename: str) -> svgwrite.Drawing:
         size=(f"{page_cfg.width_mm}mm", f"{page_cfg.height_mm}mm"),
         viewBox=f"0 0 {page_cfg.width_mm} {page_cfg.height_mm}",
     )
-    dwg.add(dwg.rect(
-        insert=(0, 0),
-        size=(page_cfg.width_mm, page_cfg.height_mm),
-        fill="black",
-        stroke="none",
-    ))
-    dwg.add(dwg.rect(
-        insert=(page_cfg.margin, page_cfg.margin),
-        size=(
-            page_cfg.width_mm - 2 * page_cfg.margin,
-            page_cfg.height_mm - 2 * page_cfg.margin,
-        ),
-        fill="white",
-        stroke="none",
-    ))
+    dwg.add(
+        dwg.rect(
+            insert=(0, 0),
+            size=(page_cfg.width_mm, page_cfg.height_mm),
+            fill="black",
+            stroke="none",
+        )
+    )
+    dwg.add(
+        dwg.rect(
+            insert=(page_cfg.margin, page_cfg.margin),
+            size=(
+                page_cfg.width_mm - 2 * page_cfg.margin,
+                page_cfg.height_mm - 2 * page_cfg.margin,
+            ),
+            fill="white",
+            stroke="none",
+        )
+    )
     return dwg
 
 

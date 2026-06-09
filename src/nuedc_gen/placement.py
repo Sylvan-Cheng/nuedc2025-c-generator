@@ -25,9 +25,16 @@ class PlacementResult:
 
 # ===== 共享原语 =====
 
+
 def _random_position(page_cfg: PageConfig, size: float) -> tuple[float, float]:
-    x = random.uniform(page_cfg.inner_x, page_cfg.width_mm - page_cfg.margin - page_cfg.safe_margin - size)
-    y = random.uniform(page_cfg.inner_y, page_cfg.height_mm - page_cfg.margin - page_cfg.safe_margin - size)
+    x = random.uniform(
+        page_cfg.inner_x,
+        page_cfg.width_mm - page_cfg.margin - page_cfg.safe_margin - size,
+    )
+    y = random.uniform(
+        page_cfg.inner_y,
+        page_cfg.height_mm - page_cfg.margin - page_cfg.safe_margin - size,
+    )
     return x, y
 
 
@@ -42,7 +49,12 @@ def _is_overlapping(sq1: Square, sq2: Square, gap_mm: float = 0) -> bool:
     """判断两个正方形的边界矩形是否重叠（可扩展间距）"""
     r1 = sq1.bounding_rect()
     r2 = sq2.bounding_rect()
-    x1, y1, w1, h1 = r1[0] - gap_mm, r1[1] - gap_mm, r1[2] + 2 * gap_mm, r1[3] + 2 * gap_mm
+    x1, y1, w1, h1 = (
+        r1[0] - gap_mm,
+        r1[1] - gap_mm,
+        r1[2] + 2 * gap_mm,
+        r1[3] + 2 * gap_mm,
+    )
     x2, y2, w2, h2 = r2
     return not (x1 + w1 <= x2 or x2 + w2 <= x1 or y1 + h1 <= y2 or y2 + h2 <= y1)
 
@@ -110,8 +122,13 @@ def _assign_digits(
     for sq in squares:
         cx, cy = sq.center
         digit_info = assign_digit(
-            cx, cy, sq.size, sq.angle,
-            used_digits, digit_centers, font_cfg,
+            cx,
+            cy,
+            sq.size,
+            sq.angle,
+            used_digits,
+            digit_centers,
+            font_cfg,
             overlap_threshold_mm,
         )
         if digit_info:
@@ -137,6 +154,7 @@ def _is_gap_too_narrow(sq: Square, existing: Square, gap_mm: float) -> bool:
 
 # ===== 放置策略 =====
 
+
 def _place_easy(
     page_cfg: PageConfig,
     square_cfg: SquareConfig,
@@ -160,7 +178,16 @@ def _place_easy(
 
         for x, y in positions:
             sq = Square(x, y, size, 0)
-            if not is_square_in_bounds(x, y, size, 0, page_cfg.width_mm, page_cfg.height_mm, page_cfg.margin, page_cfg.safe_margin):
+            if not is_square_in_bounds(
+                x,
+                y,
+                size,
+                0,
+                page_cfg.width_mm,
+                page_cfg.height_mm,
+                page_cfg.margin,
+                page_cfg.safe_margin,
+            ):
                 valid = False
                 break
             for existing in placed:
@@ -172,7 +199,11 @@ def _place_easy(
             placed.append(sq)
 
         if valid and len(placed) == count:
-            digits = _assign_digits(placed, font_cfg, digit_cfg.overlap_threshold_mm) if generate_digits else []
+            digits = (
+                _assign_digits(placed, font_cfg, digit_cfg.overlap_threshold_mm)
+                if generate_digits
+                else []
+            )
             return PlacementResult(squares=placed, digits=digits)
 
     # 降级：保证尺寸 ≥ min_size_mm，必要时减少数量
@@ -182,7 +213,11 @@ def _place_easy(
     fallback_count = min(count, max_cols * max_rows)
     positions = _generate_grid_positions(fallback_count, page_cfg, fallback_size)
     placed = [Square(x, y, fallback_size, 0) for x, y in positions]
-    digits = _assign_digits(placed, font_cfg, digit_cfg.overlap_threshold_mm) if generate_digits else []
+    digits = (
+        _assign_digits(placed, font_cfg, digit_cfg.overlap_threshold_mm)
+        if generate_digits
+        else []
+    )
     return PlacementResult(squares=placed, digits=digits)
 
 
@@ -209,7 +244,16 @@ def _place_medium(
                 x, y = _random_position(page_cfg, size)
                 sq = Square(x, y, size, 0)
 
-                if not is_square_in_bounds(x, y, size, 0, page_cfg.width_mm, page_cfg.height_mm, page_cfg.margin, page_cfg.safe_margin):
+                if not is_square_in_bounds(
+                    x,
+                    y,
+                    size,
+                    0,
+                    page_cfg.width_mm,
+                    page_cfg.height_mm,
+                    page_cfg.margin,
+                    page_cfg.safe_margin,
+                ):
                     continue
 
                 existing_overlaps = _count_overlaps(placed)
@@ -238,11 +282,23 @@ def _place_medium(
                 break
 
         if len(placed) == count:
-            digits = _assign_digits(placed, font_cfg, digit_cfg.overlap_threshold_mm) if generate_digits else []
+            digits = (
+                _assign_digits(placed, font_cfg, digit_cfg.overlap_threshold_mm)
+                if generate_digits
+                else []
+            )
             return PlacementResult(squares=placed, digits=digits)
 
     # 降级
-    return _place_easy(page_cfg, square_cfg, max(2, min_count), max_count, font_cfg, digit_cfg, generate_digits)
+    return _place_easy(
+        page_cfg,
+        square_cfg,
+        max(2, min_count),
+        max_count,
+        font_cfg,
+        digit_cfg,
+        generate_digits,
+    )
 
 
 def _try_place_hard(
@@ -274,9 +330,14 @@ def _try_place_hard(
         angle = random.uniform(0, 360)
 
         if not is_square_in_bounds(
-            x, y, size, angle,
-            page_cfg.width_mm, page_cfg.height_mm,
-            page_cfg.margin, page_cfg.safe_margin,
+            x,
+            y,
+            size,
+            angle,
+            page_cfg.width_mm,
+            page_cfg.height_mm,
+            page_cfg.margin,
+            page_cfg.safe_margin,
         ):
             continue
 
@@ -285,7 +346,9 @@ def _try_place_hard(
         new_index = len(placed)
 
         # relaxed 模式跳过可检测性检查
-        if not relaxed and not is_square_detectable(new_square, temp_squares, new_index):
+        if not relaxed and not is_square_detectable(
+            new_square, temp_squares, new_index
+        ):
             continue
 
         digit_info = None
@@ -293,8 +356,13 @@ def _try_place_hard(
             center_x = x + size / 2
             center_y = y + size / 2
             digit_info = assign_digit(
-                center_x, center_y, size, angle,
-                used_digits, digit_centers, font_cfg,
+                center_x,
+                center_y,
+                size,
+                angle,
+                used_digits,
+                digit_centers,
+                font_cfg,
                 digit_cfg.overlap_threshold_mm,
             )
             if digit_info is None:
@@ -327,20 +395,27 @@ def _place_hard(
     count = random.randint(min_count, max_count)
 
     # 第一轮：严格约束
-    result = _try_place_hard(page_cfg, square_cfg, count, font_cfg, digit_cfg, generate_digits, relaxed=False)
+    result = _try_place_hard(
+        page_cfg, square_cfg, count, font_cfg, digit_cfg, generate_digits, relaxed=False
+    )
     if len(result.squares) >= min_count:
         return result
 
     # 第二轮：放宽约束
-    result = _try_place_hard(page_cfg, square_cfg, count, font_cfg, digit_cfg, generate_digits, relaxed=True)
+    result = _try_place_hard(
+        page_cfg, square_cfg, count, font_cfg, digit_cfg, generate_digits, relaxed=True
+    )
     if len(result.squares) >= min_count:
         return result
 
     # 最终降级：无旋转无重叠，保证数量
-    return _place_easy(page_cfg, square_cfg, min_count, max_count, font_cfg, digit_cfg, generate_digits)
+    return _place_easy(
+        page_cfg, square_cfg, min_count, max_count, font_cfg, digit_cfg, generate_digits
+    )
 
 
 # ===== 公共接口 =====
+
 
 def _dispatch_place(
     page_cfg: PageConfig,
@@ -355,11 +430,35 @@ def _dispatch_place(
 ) -> PlacementResult:
     """统一的布局策略入口：根据参数选择策略"""
     if not allow_overlap and not allow_rotation:
-        return _place_easy(page_cfg, square_cfg, min_count, max_count, font_cfg, digit_cfg, generate_digits)
+        return _place_easy(
+            page_cfg,
+            square_cfg,
+            min_count,
+            max_count,
+            font_cfg,
+            digit_cfg,
+            generate_digits,
+        )
     elif allow_overlap and not allow_rotation:
-        return _place_medium(page_cfg, square_cfg, min_count, max_count, font_cfg, digit_cfg, generate_digits)
+        return _place_medium(
+            page_cfg,
+            square_cfg,
+            min_count,
+            max_count,
+            font_cfg,
+            digit_cfg,
+            generate_digits,
+        )
     else:
-        return _place_hard(page_cfg, square_cfg, min_count, max_count, font_cfg, digit_cfg, generate_digits)
+        return _place_hard(
+            page_cfg,
+            square_cfg,
+            min_count,
+            max_count,
+            font_cfg,
+            digit_cfg,
+            generate_digits,
+        )
 
 
 def place_squares(
@@ -377,9 +476,15 @@ def place_squares(
         allow_overlap, allow_rotation = True, True
 
     return _dispatch_place(
-        page_cfg, ext_cfg.square, font_cfg, ext_cfg.digit,
-        ext_cfg.min_count, ext_cfg.max_count,
-        allow_overlap, allow_rotation, generate_digits,
+        page_cfg,
+        ext_cfg.square,
+        font_cfg,
+        ext_cfg.digit,
+        ext_cfg.min_count,
+        ext_cfg.max_count,
+        allow_overlap,
+        allow_rotation,
+        generate_digits,
     )
 
 
@@ -392,8 +497,13 @@ def place_c_exam_page(
 ) -> PlacementResult:
     """根据 C 题类型配置生成一页布局"""
     return _dispatch_place(
-        page_cfg, square_cfg, font_cfg, digit_cfg,
-        type_cfg.effective_min, type_cfg.effective_max,
-        type_cfg.allow_overlap, type_cfg.allow_rotation,
+        page_cfg,
+        square_cfg,
+        font_cfg,
+        digit_cfg,
+        type_cfg.effective_min,
+        type_cfg.effective_max,
+        type_cfg.allow_overlap,
+        type_cfg.allow_rotation,
         type_cfg.generate_digits,
     )

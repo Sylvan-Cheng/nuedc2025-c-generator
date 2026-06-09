@@ -11,6 +11,7 @@ from typing import NamedTuple
 
 # ===== 配置加载（仅 __main__ 调用） =====
 
+
 def load_config(path: Path | None = None) -> dict:
     """读取 config.toml. 仅在 __main__ 入口调用，不再有模块级副作用."""
     if path is not None:
@@ -31,11 +32,13 @@ def load_config(path: Path | None = None) -> dict:
 
 # ===== 难度枚举 =====
 
+
 class Difficulty(IntEnum):
     """发挥目标物难度级别"""
-    EASY = 0      # 1-3个正方形，不旋转，不重叠，平均分布
-    MEDIUM = 1    # 2-4个正方形，不旋转，最多1对重叠，其余留间距
-    HARD = 2      # 3-5个正方形，随机旋转，可重叠
+
+    EASY = 0  # 1-3个正方形，不旋转，不重叠，平均分布
+    MEDIUM = 1  # 2-4个正方形，不旋转，最多1对重叠，其余留间距
+    HARD = 2  # 3-5个正方形，随机旋转，可重叠
 
     @property
     def min_count(self) -> int:
@@ -47,6 +50,7 @@ class Difficulty(IntEnum):
 
 
 # ===== 全局配置 =====
+
 
 @dataclass(frozen=True)
 class GlobalConfig:
@@ -61,6 +65,7 @@ class GlobalConfig:
 
 
 # ===== 页面配置 =====
+
 
 @dataclass(frozen=True)
 class PageConfig:
@@ -98,6 +103,7 @@ class PageConfig:
 
 # ===== 基本目标物配置 =====
 
+
 @dataclass(frozen=True)
 class BasicTargetConfig:
     enable: bool = True
@@ -118,6 +124,7 @@ class BasicTargetConfig:
 
 # ===== 发挥目标物配置 =====
 
+
 @dataclass(frozen=True)
 class SquareConfig:
     min_size_mm: int = 60
@@ -127,7 +134,11 @@ class SquareConfig:
     @classmethod
     def from_raw(cls, raw: dict) -> SquareConfig:
         sq = raw["extended_target"]["square"]
-        return cls(min_size_mm=sq["min_size_mm"], max_size_mm=sq["max_size_mm"], gap_mm=sq["gap_mm"])
+        return cls(
+            min_size_mm=sq["min_size_mm"],
+            max_size_mm=sq["max_size_mm"],
+            gap_mm=sq["gap_mm"],
+        )
 
 
 @dataclass(frozen=True)
@@ -138,10 +149,13 @@ class DigitConfig:
     @classmethod
     def from_raw(cls, raw: dict) -> DigitConfig:
         dg = raw["extended_target"]["digit"]
-        return cls(font_size=dg["font_size"], overlap_threshold_mm=dg["overlap_threshold_mm"])
+        return cls(
+            font_size=dg["font_size"], overlap_threshold_mm=dg["overlap_threshold_mm"]
+        )
 
 
 # ===== 字体配置 =====
+
 
 class FontEntry(NamedTuple):
     display_name: str
@@ -179,7 +193,10 @@ DEFAULT_FONT_CONFIGS: dict[str, FontEntry] = {
 @dataclass(frozen=True)
 class FontConfig:
     """纯配置数据，不包含行为逻辑"""
-    configs: dict[str, FontEntry] = field(default_factory=lambda: dict(DEFAULT_FONT_CONFIGS))
+
+    configs: dict[str, FontEntry] = field(
+        default_factory=lambda: dict(DEFAULT_FONT_CONFIGS)
+    )
     weights: dict[str, float] = field(default_factory=lambda: {"Times New Roman": 1.0})
     bold_probability: float = 0.3
     enable_bold: bool = False
@@ -196,7 +213,11 @@ class FontConfig:
 
         if enable_multi:
             raw_weights = font_raw.get("weights", {})
-            weights = dict(raw_weights) if raw_weights else {"Times New Roman": 0.6, "Arial": 0.2, "Consolas": 0.2}
+            weights = (
+                dict(raw_weights)
+                if raw_weights
+                else {"Times New Roman": 0.6, "Arial": 0.2, "Consolas": 0.2}
+            )
         else:
             weights = {"Times New Roman": 1.0}
 
@@ -260,9 +281,11 @@ class FontSelector:
 
 # ===== 数据增强配置 =====
 
+
 @dataclass(frozen=True)
 class AugmentConfig:
     """全局数据增强配置"""
+
     enable: bool = True
     rotation_range: float = 5.0
     brightness_range: tuple[float, float] = (0.9, 1.1)
@@ -282,6 +305,7 @@ class AugmentConfig:
 
 
 # ===== 发挥目标物总配置 =====
+
 
 @dataclass(frozen=True)
 class ExtendedTargetConfig:
@@ -315,9 +339,11 @@ class ExtendedTargetConfig:
 
 # ===== C 题标准模式配置 =====
 
+
 @dataclass(frozen=True)
 class CExamTypeConfig:
     """单个 C 题发挥目标物类型的配置"""
+
     count: int | None = None
     count_min: int | None = None
     count_max: int | None = None
@@ -338,10 +364,28 @@ class CExamTypeConfig:
 @dataclass(frozen=True)
 class CExamConfig:
     enable: bool = False
-    type1_single: CExamTypeConfig = field(default_factory=lambda: CExamTypeConfig(count=1, total_files=3))
-    type2_multi: CExamTypeConfig = field(default_factory=lambda: CExamTypeConfig(count_min=2, count_max=4, total_files=5, allow_overlap=True))
-    type3_digit: CExamTypeConfig = field(default_factory=lambda: CExamTypeConfig(count_min=2, count_max=4, total_files=5, generate_digits=True, allow_overlap=True))
-    type4_rotated: CExamTypeConfig = field(default_factory=lambda: CExamTypeConfig(count=1, total_files=5, allow_rotation=True))
+    type1_single: CExamTypeConfig = field(
+        default_factory=lambda: CExamTypeConfig(count=1, total_files=3)
+    )
+    type2_multi: CExamTypeConfig = field(
+        default_factory=lambda: CExamTypeConfig(
+            count_min=2, count_max=4, total_files=5, allow_overlap=True
+        )
+    )
+    type3_digit: CExamTypeConfig = field(
+        default_factory=lambda: CExamTypeConfig(
+            count_min=2,
+            count_max=4,
+            total_files=5,
+            generate_digits=True,
+            allow_overlap=True,
+        )
+    )
+    type4_rotated: CExamTypeConfig = field(
+        default_factory=lambda: CExamTypeConfig(
+            count=1, total_files=5, allow_rotation=True
+        )
+    )
 
     @classmethod
     def from_raw(cls, raw: dict) -> CExamConfig:
@@ -358,21 +402,47 @@ class CExamConfig:
                 count_min=t.get("count_min"),
                 count_max=t.get("count_max"),
                 total_files=t.get("total_files", defaults.get("total_files", 3)),
-                generate_digits=t.get("generate_digits", defaults.get("generate_digits", False)),
-                allow_overlap=t.get("allow_overlap", defaults.get("allow_overlap", False)),
-                allow_rotation=t.get("allow_rotation", defaults.get("allow_rotation", False)),
+                generate_digits=t.get(
+                    "generate_digits", defaults.get("generate_digits", False)
+                ),
+                allow_overlap=t.get(
+                    "allow_overlap", defaults.get("allow_overlap", False)
+                ),
+                allow_rotation=t.get(
+                    "allow_rotation", defaults.get("allow_rotation", False)
+                ),
             )
 
         return cls(
             enable=ce.get("enable", False),
             type1_single=_parse_type("type1_single", {"count": 1, "total_files": 3}),
-            type2_multi=_parse_type("type2_multi", {"count_min": 2, "count_max": 4, "total_files": 5, "allow_overlap": True}),
-            type3_digit=_parse_type("type3_digit", {"count_min": 2, "count_max": 4, "total_files": 5, "generate_digits": True, "allow_overlap": True}),
-            type4_rotated=_parse_type("type4_rotated", {"count": 1, "total_files": 5, "allow_rotation": True}),
+            type2_multi=_parse_type(
+                "type2_multi",
+                {
+                    "count_min": 2,
+                    "count_max": 4,
+                    "total_files": 5,
+                    "allow_overlap": True,
+                },
+            ),
+            type3_digit=_parse_type(
+                "type3_digit",
+                {
+                    "count_min": 2,
+                    "count_max": 4,
+                    "total_files": 5,
+                    "generate_digits": True,
+                    "allow_overlap": True,
+                },
+            ),
+            type4_rotated=_parse_type(
+                "type4_rotated", {"count": 1, "total_files": 5, "allow_rotation": True}
+            ),
         )
 
 
 # ===== 导出配置 =====
+
 
 @dataclass(frozen=True)
 class ExportConfig:
@@ -382,12 +452,15 @@ class ExportConfig:
     @classmethod
     def from_raw(cls, raw: dict) -> ExportConfig:
         exp = raw["export"]
-        return cls(png_size=exp["png_size"], enable_digit_export=exp["enable_digit_export"])
+        return cls(
+            png_size=exp["png_size"], enable_digit_export=exp["enable_digit_export"]
+        )
 
 
 @dataclass(frozen=True)
 class YoloDigitConfig:
     """YOLO数字裁剪配置"""
+
     image_sizes: tuple[int, ...] = (64, 128, 256)
     digit_size_ratio_min: float = 0.25
     digit_size_ratio_max: float = 0.5
@@ -411,6 +484,7 @@ class YoloDigitConfig:
 @dataclass(frozen=True)
 class YoloExportConfig:
     """YOLO数据集导出配置"""
+
     enable: bool = False
     train_ratio: float = 0.8
     val_ratio: float = 0.15

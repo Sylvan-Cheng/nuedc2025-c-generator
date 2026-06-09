@@ -30,7 +30,6 @@ from .config import (
 from .page_generator import generate_c_exam_pages, generate_page
 from .placement import place_squares
 from .yolo_export import (
-    cleanup_yolo_tmp,
     generate_yolo_dataset,
     init_yolo_dataset_dir,
 )
@@ -74,15 +73,21 @@ def main() -> None:
     if c_exam_cfg.enable:
         print("[bold cyan]=== 生成 C 题标准发挥目标物 ===[/bold cyan]")
         generate_c_exam_pages(
-            page_cfg, c_exam_cfg,
-            ext_cfg.square, ext_cfg.digit, font_cfg,
-            export_cfg, noise_cfg,
+            page_cfg,
+            c_exam_cfg,
+            ext_cfg.square,
+            ext_cfg.digit,
+            font_cfg,
+            export_cfg,
+            noise_cfg,
             c_exam_dir,
         )
         print()
 
     if ext_cfg.enable and ext_cfg.total_files > 0:
-        print(f"[bold cyan]=== 生成发挥目标物 - {DIFFICULTY_NAMES[ext_cfg.difficulty]} ===[/bold cyan]")
+        print(
+            f"[bold cyan]=== 生成发挥目标物 - {DIFFICULTY_NAMES[ext_cfg.difficulty]} ===[/bold cyan]"
+        )
 
         with Progress(
             SpinnerColumn(),
@@ -99,11 +104,18 @@ def main() -> None:
             )
             for i in range(1, ext_cfg.total_files + 1):
                 filename = f"{i}.svg"
-                result = place_squares(page_cfg, ext_cfg, font_cfg, generate_digits=True)
+                result = place_squares(
+                    page_cfg, ext_cfg, font_cfg, generate_digits=True
+                )
                 generate_page(
-                    page_cfg, result.squares, result.digits, filename,
-                    extended_target_dir, ext_cfg.digit.font_size,
-                    export_cfg, noise_cfg,
+                    page_cfg,
+                    result.squares,
+                    result.digits,
+                    filename,
+                    extended_target_dir,
+                    ext_cfg.digit.font_size,
+                    export_cfg,
+                    noise_cfg,
                 )
                 progress.update(task, advance=1)
 

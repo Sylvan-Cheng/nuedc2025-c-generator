@@ -30,7 +30,7 @@ def crop_svg_to_png(
 ) -> bool:
     new_vb = f"{viewbox_x} {viewbox_y} {viewbox_w} {viewbox_h}"
     # 替换 viewBox（只改第一个 <svg 标签上的）
-    local_svg, n = _VIEWBOX_RE.subn(r'\g<1>' + new_vb + r'\3', full_svg_data, count=1)
+    local_svg, n = _VIEWBOX_RE.subn(r"\g<1>" + new_vb + r"\3", full_svg_data, count=1)
     if n == 0:
         print(f"导出失败 {output_path}: 未找到 viewBox 属性")
         return False
@@ -39,7 +39,9 @@ def crop_svg_to_png(
     clean_svg = _UNIT_RE.sub(r'\1="\2"', local_svg)
 
     try:
-        png_bytes = resvg_py.svg_to_bytes(svg_string=clean_svg, width=output_px, height=output_px)
+        png_bytes = resvg_py.svg_to_bytes(
+            svg_string=clean_svg, width=output_px, height=output_px
+        )
         with open(output_path, "wb") as f:
             f.write(bytes(png_bytes))
         return True
@@ -58,7 +60,9 @@ def export_digit_pngs(
     for info in digits:
         digit_dir = os.path.join(output_dir, info.font_folder_name, str(info.digit))
         os.makedirs(digit_dir, exist_ok=True)
-        png_path = os.path.join(digit_dir, f"{int(info.center_x)}_{int(info.center_y)}.png")
+        png_path = os.path.join(
+            digit_dir, f"{int(info.center_x)}_{int(info.center_y)}.png"
+        )
 
         crop_size = info.size / 2
         half_crop = crop_size / 2
@@ -72,7 +76,9 @@ def export_digit_pngs(
             export_cfg.png_size,
         )
         if ok:
-            print(f"已保存数字 {info.digit} (字体: {info.font_folder_name}) -> {png_path}")
+            print(
+                f"已保存数字 {info.digit} (字体: {info.font_folder_name}) -> {png_path}"
+            )
 
 
 def export_noise_pngs(
@@ -105,8 +111,13 @@ def export_noise_pngs(
         attempts += 1
         cx = random.uniform(min_cx, max_cx)
         cy = random.uniform(min_cy, max_cy)
-        crop_rect = (cx - half_crop, cy - half_crop, noise_cfg.crop_size_mm, noise_cfg.crop_size_mm)
-        crop_area = noise_cfg.crop_size_mm ** 2
+        crop_rect = (
+            cx - half_crop,
+            cy - half_crop,
+            noise_cfg.crop_size_mm,
+            noise_cfg.crop_size_mm,
+        )
+        crop_area = noise_cfg.crop_size_mm**2
 
         total_overlap = 0.0
         for sq in squares:
@@ -125,8 +136,10 @@ def export_noise_pngs(
         )
         ok = crop_svg_to_png(
             full_svg,
-            cx - half_crop, cy - half_crop,
-            noise_cfg.crop_size_mm, noise_cfg.crop_size_mm,
+            cx - half_crop,
+            cy - half_crop,
+            noise_cfg.crop_size_mm,
+            noise_cfg.crop_size_mm,
             png_path,
             export_cfg.png_size,
         )
@@ -135,10 +148,14 @@ def export_noise_pngs(
             noise_exported += 1
 
     if noise_exported < noise_cfg.count:
-        print(f"噪声图像生成不足 ({noise_exported}/{noise_cfg.count})，已达最大尝试次数。")
+        print(
+            f"噪声图像生成不足 ({noise_exported}/{noise_cfg.count})，已达最大尝试次数。"
+        )
 
 
-def save_svg_and_pdf(dwg: svgwrite.Drawing, filename: str, output_dir: str = "output") -> None:
+def save_svg_and_pdf(
+    dwg: svgwrite.Drawing, filename: str, output_dir: str = "output"
+) -> None:
     os.makedirs(os.path.join(output_dir, "svg"), exist_ok=True)
     os.makedirs(os.path.join(output_dir, "pdf"), exist_ok=True)
 

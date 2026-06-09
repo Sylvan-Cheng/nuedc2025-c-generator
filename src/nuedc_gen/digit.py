@@ -10,6 +10,7 @@ from .config import FontConfig, FontSelector
 @dataclass(frozen=True)
 class DigitInfo:
     """数字信息 — 领域数据 + 渲染数据合并（保持向后兼容）"""
+
     digit: int
     center_x: float
     center_y: float
