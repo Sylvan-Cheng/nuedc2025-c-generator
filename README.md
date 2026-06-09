@@ -2,9 +2,9 @@
 
 2025年全国大学生电子设计竞赛C题 — 基于单目视觉的目标物测量装置 — 标准化测试图案生成器。
 
-生成A4尺寸（210×297mm）的SVG/PDF测试图案，用于系统调试和训练数据集生成。
+生成A4尺寸（210×297mm）的SVG/PDF测试图案，以及YOLO数字识别训练数据集。
 
-> 2025电赛C题国一。用来生成调试用的目标物图案。
+> 2025电赛C题国一。用来生成调试用的目标物图案和训练数据集。
 
 ## 功能
 
@@ -40,6 +40,39 @@
 | 0 简单 | 1-3个 | 无 | 无，网格排列 |
 | 1 中等 | 2-4个 | 无 | 最多1对，重叠≤30% |
 | 2 困难 | 3-5个 | 随机 | 允许，需可检测（≥2条边+1个角可见） |
+
+### YOLO数字识别数据集
+
+生成用于YOLO训练的数字识别数据集，模拟CV裁切后的图像：
+
+- **黑底白字**：模拟正方形内数字
+- **多尺度裁切**：64/128/256px
+- **模拟CV误差**：位置偏移 ±5px
+- **光照变化**：亮度/对比度随机调整
+- **多字体支持**：Times New Roman、Arial、Consolas
+- **数据增强**：旋转、噪声
+
+| 类别 | 说明 |
+|------|------|
+| 0-9 | 数字类别 |
+
+#### 裁切尺寸设计依据
+
+基于竞赛实际场景推算（1080p 摄像头, 90° FOV, 距离 100cm~200cm）：
+
+| 距离 D | 画面水平宽度 | A4页(21cm) | 60mm正方形 | 120mm正方形 | 30mm数字 |
+|--------|-------------|-----------|-----------|------------|---------|
+| 100cm | 200cm | 202px | 58px | 115px | 29px |
+| 150cm | 300cm | 134px | 38px | 77px | 19px |
+| 200cm | 400cm | 101px | 29px | 58px | 14px |
+
+实际竞赛中数字仅 **14~29px** 高。多尺度裁切对应：
+
+| 裁切尺寸 | 正方形像素 | 数字范围 | 覆盖场景 |
+|----------|-----------|---------|---------|
+| 64px | 51px | 13~26px | 远距离小正方形 (D≈2m, 60mm) |
+| 128px | 102px | 26~51px | 中距离 (D≈1.5m) |
+| 256px | 205px | 51~102px | 近距离 + 裁切余量 |
 
 ## 安装
 
@@ -77,7 +110,18 @@ output/
 │   ├── type2_multi/svg/   type2_multi/pdf/
 │   ├── type3_digit/svg/   type3_digit/pdf/
 │   └── type4_rotated/svg/ type4_rotated/pdf/
-└── svg/  pdf/              ← 批量训练数据集（默认50个文件）
+├── svg/  pdf/              ← 批量训练数据集（默认500个文件）
+└── yolo_dataset/           ← YOLO数字识别数据集
+    ├── data.yaml           ← YOLO配置文件
+    ├── train/
+    │   ├── images/         ← 训练集图片
+    │   └── labels/         ← 训练集标注
+    ├── val/
+    │   ├── images/         ← 验证集图片
+    │   └── labels/         ← 验证集标注
+    └── test/
+        ├── images/         ← 测试集图片
+        └── labels/         ← 测试集标注
 ```
 
 每个SVG文件对应一个同名PDF文件。
@@ -86,70 +130,101 @@ output/
 
 所有配置在 `config.toml`，运行时自动从项目根目录加载。
 
+### 全局配置
+
+```toml
+[global]
+output_dir = "output"        # 全局输出目录
+```
+
 ### 页面设置
 
 ```toml
 [page]
-width_mm = 210        # A4 宽度 (mm)
-height_mm = 297       # A4 高度 (mm)
-margin_mm = 20        # 黑色边框宽度 (mm)，C题要求 2cm
-safe_margin_mm = 5    # 白色区域内安全边距 (mm)
+width_mm = 210              # A4 宽度 (mm)
+height_mm = 297             # A4 高度 (mm)
+margin_mm = 20              # 黑色边框宽度 (mm)，C题要求 2cm
+safe_margin_mm = 5          # 白色区域内安全边距 (mm)
+```
+
+### 字体配置
+
+```toml
+[fonts]
+paths = ["fonts/times.ttf", "fonts/arial.ttf", "fonts/consolas.ttf"]  # 字体文件路径
+enable_bold = false         # 是否生成加粗字体样本
+bold_probability = 0.3      # 加粗概率（enable_bold=true时生效）
+enable_multi_font = false   # 是否启用多字体
+
+# 字体权重（enable_multi_font=true时生效，总和应为1.0）
+[fonts.weights]
+"Times New Roman" = 0.6
+Arial = 0.2
+Consolas = 0.2
+```
+
+### 数据增强配置
+
+```toml
+[augment]
+enable = true               # 是否启用数据增强
+rotation_range = 5.0        # 旋转范围 ±5°
+brightness_range = [0.9, 1.1]  # 亮度范围
+contrast_range = [0.9, 1.1]    # 对比度范围
+noise_std = 0.005           # 高斯噪声标准差
 ```
 
 ### 基本目标物
 
 ```toml
 [basic_target]
-enable = true
-min_size_mm = 100     # 最小边长/直径 (mm)
-max_size_mm = 160     # 最大边长/直径 (mm)
-step_mm = 5           # 尺寸间隔 (mm)
+enable = true               # 是否生成基本目标物
+min_size_mm = 100           # 最小边长/直径 (mm)
+max_size_mm = 160           # 最大边长/直径 (mm)
+step_mm = 5                 # 尺寸间隔 (mm)
 ```
 
 ### 发挥目标物（批量模式）
 
 ```toml
 [extended_target]
-difficulty = 1        # 0=简单, 1=中等, 2=困难
-total_files = 50      # 生成图片总数
+enable = true               # 是否生成发挥目标物
+difficulty = 2              # 0=简单, 1=中等, 2=困难
+total_files = 500           # 生成图片总数
+digits_per_square = true    # 是否为每个正方形分配数字
 
 [extended_target.square]
-min_size_mm = 60      # 正方形最小边长 (mm)
-max_size_mm = 120     # 正方形最大边长 (mm)
-gap_mm = 10           # 不重叠时的最小间距 (mm)
+min_size_mm = 60            # 正方形最小边长 (mm)
+max_size_mm = 120           # 正方形最大边长 (mm)
+gap_mm = 10                 # 不重叠时的最小间距 (mm)
 
 [extended_target.digit]
-font_size = 30        # 数字字体大小
-overlap_threshold_mm = 40  # 数字中心最小间距 (mm)
-
-[extended_target.font]
-enable_bold = false   # 是否生成加粗字体样本
-enable_multi_font = false  # 是否启用多字体
+font_size = 30              # 数字字体大小
+overlap_threshold_mm = 40   # 数字中心最小间距 (mm)
 ```
 
 ### C题标准模式
 
 ```toml
 [c_exam]
-enable = true
-output_dir = "output/c_exam"
+enable = true               # 是否生成C题标准目标物
 
-[c_exam.type1_single]   # 单个正方形
+[c_exam.type1_single]       # 单个正方形
 count = 1
 total_files = 3
 
-[c_exam.type2_multi]    # 多正方形组合
+[c_exam.type2_multi]        # 多正方形组合
 count_min = 2
 count_max = 4
 total_files = 5
 
-[c_exam.type3_digit]    # 带数字编号
+[c_exam.type3_digit]        # 带数字编号
 count_min = 2
 count_max = 4
 total_files = 5
 generate_digits = true
 
-[c_exam.type4_rotated]  # 单个正方形，随机旋转
+[c_exam.type4_rotated]      # 单个正方形，随机旋转
 count = 1
 total_files = 5
 allow_rotation = true
@@ -159,14 +234,32 @@ allow_rotation = true
 
 ```toml
 [export]
-png_size = 60              # 裁剪 PNG 尺寸 (px)
-enable_digit_export = false  # 是否生成数字裁剪 PNG
+png_size = 60               # 裁剪 PNG 尺寸 (px)
+enable_digit_export = false # 是否生成数字裁剪 PNG
 
 [export.noise]
-enable = false             # 是否生成噪声裁剪
-count = 4                  # 每张图噪声裁剪数
-overlap_threshold = 0.4    # 允许最大正方形重叠比例
-crop_size_mm = 50.0        # 裁剪区域边长 (mm)
+enable = false              # 是否生成噪声裁剪
+count = 4                   # 每张图噪声裁剪数
+overlap_threshold = 0.4     # 允许最大正方形重叠比例
+crop_size_mm = 50.0         # 裁剪区域边长 (mm)
+```
+
+### YOLO数据集导出
+
+```toml
+[yolo_export]
+enable = true               # 是否生成YOLO数据集
+train_ratio = 0.8           # 训练集比例
+val_ratio = 0.15            # 验证集比例
+test_ratio = 0.05           # 测试集比例
+
+[yolo_export.digit]
+image_sizes = [64, 128, 256]  # 多尺度裁切 (px)
+digit_size_ratio_min = 0.25  # 数字占正方形比例最小 25%
+digit_size_ratio_max = 0.5   # 数字占正方形比例最大 50%
+square_ratio = 0.8           # 正方形占图片比例 80%
+cv_noise_level = 5           # CV裁切误差 (像素)
+samples_per_digit = 1000     # 每类数字样本数
 ```
 
 ## 项目结构
@@ -181,16 +274,20 @@ src/nuedc_gen/
 ├── placement.py      — 正方形布局策略（easy/medium/hard + C题标准）
 ├── renderer.py       — SVG 构建（背景、正方形、数字、基本图形）
 ├── export.py         — SVG→PNG/PDF 导出
-└── basic_target.py   — 基本目标物生成
+├── page_generator.py — 页面生成管线（渲染→导出→保存）
+├── basic_target.py   — 基本目标物生成
+└── yolo_export.py    — YOLO数据集生成
 ```
 
 ### 模块依赖
 
 ```
-__main__ → config, placement, renderer, export, basic_target
+__main__ → config, page_generator, placement, basic_target, yolo_export
+page_generator → config, renderer, export, placement
 placement → config, geometry, digit
 renderer → config, geometry, digit
 export → config, geometry, digit
+yolo_export → config
 digit → config
 geometry → (无依赖)
 ```
@@ -203,6 +300,9 @@ geometry → (无依赖)
 | resvg-py | SVG→PNG 渲染 |
 | svglib + reportlab | SVG→PDF 转换 |
 | rich | 进度条显示 |
+| pyyaml | YAML 配置文件 |
+| numpy | 数值计算 |
+| pillow | 图像处理 |
 
 ## License
 
