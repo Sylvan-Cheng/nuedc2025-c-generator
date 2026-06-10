@@ -163,13 +163,11 @@ def save_svg_and_pdf(
     pdf_path = os.path.join(output_dir, "pdf", filename.replace(".svg", ".pdf"))
 
     dwg.saveas(svg_path)
-    print(f"SVG -> {svg_path}")
 
     try:
         drawing = svg2rlg(svg_path)
         if drawing is not None:
             renderPDF.drawToFile(drawing, pdf_path)
-            print(f"PDF -> {pdf_path}")
         else:
             print(f"PDF 导出失败: svg2rlg 返回 None ({svg_path})")
     except Exception as e:

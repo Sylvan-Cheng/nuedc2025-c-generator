@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 
+from rich import print
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -42,6 +43,13 @@ DIFFICULTY_NAMES = {
 
 
 def main() -> None:
+    try:
+        _run()
+    except KeyboardInterrupt:
+        print("\n[yellow]用户取消[/yellow]")
+
+
+def _run() -> None:
     raw = load_config()
 
     global_cfg = GlobalConfig.from_raw(raw)
@@ -61,32 +69,16 @@ def main() -> None:
     yolo_dataset_dir = os.path.join(global_cfg.output_dir, "yolo_dataset")
 
     if yolo_cfg.enable:
-        print("[bold cyan]=== 初始化YOLO数据集目录 ===[/bold cyan]")
         init_yolo_dataset_dir(yolo_cfg, yolo_dataset_dir)
-        print()
 
     if basic_cfg.enable:
         print("[bold cyan]=== 生成基本目标物 ===[/bold cyan]")
         generate_basic_targets(page_cfg, basic_cfg, basic_target_dir)
         print()
 
-    if c_exam_cfg.enable:
-        print("[bold cyan]=== 生成 C 题标准发挥目标物 ===[/bold cyan]")
-        generate_c_exam_pages(
-            page_cfg,
-            c_exam_cfg,
-            ext_cfg.square,
-            ext_cfg.digit,
-            font_cfg,
-            export_cfg,
-            noise_cfg,
-            c_exam_dir,
-        )
-        print()
-
     if ext_cfg.enable and ext_cfg.total_files > 0:
         print(
-            f"[bold cyan]=== 生成发挥目标物 - {DIFFICULTY_NAMES[ext_cfg.difficulty]} ===[/bold cyan]"
+            f"[bold cyan]=== 生成练习用目标物 - {DIFFICULTY_NAMES[ext_cfg.difficulty]} ===[/bold cyan]"
         )
 
         with Progress(
@@ -99,7 +91,7 @@ def main() -> None:
             expand=True,
         ) as progress:
             task = progress.add_task(
-                "[green]生成发挥目标物...",
+                "[green]生成练习用目标物...",
                 total=ext_cfg.total_files,
             )
             for i in range(1, ext_cfg.total_files + 1):
@@ -119,7 +111,27 @@ def main() -> None:
                 )
                 progress.update(task, advance=1)
 
+    print()
+
+    if c_exam_cfg.enable:
+        print("[bold cyan]=== 生成 C 题标准发挥目标物 ===[/bold cyan]")
+        generate_c_exam_pages(
+            page_cfg,
+            c_exam_cfg,
+            ext_cfg.square,
+            ext_cfg.digit,
+            font_cfg,
+            export_cfg,
+            noise_cfg,
+            c_exam_dir,
+        )
+        print()
+
     print("[bold green]所有文件生成完毕![/bold green]")
+    print(
+        "[cyan]如果觉得有用，欢迎 Star "
+        "https://github.com/Sylvan-Cheng/nuedc2025-c-generator[/cyan]"
+    )
 
     if yolo_cfg.enable:
         print()
