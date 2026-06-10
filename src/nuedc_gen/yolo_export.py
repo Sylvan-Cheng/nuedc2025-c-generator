@@ -228,14 +228,17 @@ def generate_yolo_dataset(
     cv_noise_level = digit_cfg.cv_noise_level
     samples_per_digit = digit_cfg.samples_per_digit
 
-    print(f"[bold cyan]=== 生成YOLO数据集 ({samples_per_digit}张/数字) ===[/bold cyan]")
-    font_info = "多字体" if font_cfg.enable_multi_font else "单字体"
+    total_samples = 10 * samples_per_digit
     print(
-        f"  模拟CV裁切图像，多尺度 {image_sizes}，数字占正方形 {ratio_min * 100:.0f}%-{ratio_max * 100:.0f}%，正方形占图片 {square_ratio * 100:.0f}%"
+        f"[bold cyan]=== 生成YOLO数据集 ({total_samples}张, {samples_per_digit}张/数字) ===[/bold cyan]"
+    )
+    font_info = "多字体" if font_cfg.enable_multi_font else "单字体"
+    image_sizes_text = "/".join(str(size) for size in image_sizes)
+    print(
+        f"  模拟CV裁切图像，多尺度 {image_sizes_text}，数字占正方形 {ratio_min * 100:.0f}%-{ratio_max * 100:.0f}%，正方形占图片 {square_ratio * 100:.0f}%"
     )
     print(f"  数字居中绘制，CV裁切误差 ±{cv_noise_level}px，光照变化，{font_info}")
 
-    total_samples = 10 * samples_per_digit
     with Progress(
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
@@ -275,7 +278,8 @@ def generate_yolo_dataset(
                 )
                 progress.advance(task)
 
-    print("[bold green]YOLO数据集生成完毕![/bold green]")
+    print(f"[bold green]完成: {total_samples} 张样本[/bold green]")
+    print(f"[cyan]输出: {os.path.normpath(yolo_dataset_dir)}[/cyan]")
 
 
 def init_yolo_dataset_dir(yolo_cfg: YoloExportConfig, yolo_dataset_dir: str) -> None:
@@ -301,4 +305,3 @@ def init_yolo_dataset_dir(yolo_cfg: YoloExportConfig, yolo_dataset_dir: str) -> 
     yaml_path = os.path.join(yolo_dataset_dir, "data.yaml")
     with open(yaml_path, "w", encoding="utf-8") as f:
         yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
-

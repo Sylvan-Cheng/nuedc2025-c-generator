@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 import random
 import re
+import tempfile
+import xml.etree.ElementTree as ET
 
 import resvg_py
 import svgwrite
@@ -12,6 +14,9 @@ from svglib.svglib import svg2rlg
 from .config import ExportConfig, NoiseConfig, PageConfig
 from .digit import DigitInfo
 from .geometry import Square, rectangle_overlap_area
+
+
+TEXT_BASELINE_OFFSET_RATIO = 0.35
 
 # 匹配 SVG 根元素上的 viewBox 属性（容忍空格变化）
 _VIEWBOX_RE = re.compile(r'(<svg[^>]*\bviewBox=")([^"]*)(")', re.DOTALL)
@@ -164,11 +169,55 @@ def save_svg_and_pdf(
 
     dwg.saveas(svg_path)
 
+    pdf_svg_path = svg_path
+    temp_pdf_svg_path: str | None = None
     try:
-        drawing = svg2rlg(svg_path)
+        temp_pdf_svg_path = _make_pdf_compatible_svg(svg_path)
+        pdf_svg_path = temp_pdf_svg_path or svg_path
+        drawing = svg2rlg(pdf_svg_path)
         if drawing is not None:
             renderPDF.drawToFile(drawing, pdf_path)
         else:
             print(f"PDF 导出失败: svg2rlg 返回 None ({svg_path})")
     except Exception as e:
         print(f"PDF 导出失败: {e}")
+    finally:
+        if temp_pdf_svg_path is not None:
+            try:
+                os.remove(temp_pdf_svg_path)
+            except OSError:
+                pass
+
+
+def _make_pdf_compatible_svg(svg_path: str) -> str | None:
+    """为 svglib/reportlab 创建仅用于 PDF 的文本基线兼容 SVG。"""
+    tree = ET.parse(svg_path)
+    root = tree.getroot()
+    changed = False
+
+    for elem in root.iter():
+        if not elem.tag.endswith("text"):
+            continue
+        baseline = elem.attrib.get("dominant-baseline")
+        if baseline not in {"central", "middle"}:
+            continue
+        y_raw = elem.attrib.get("y")
+        font_size_raw = elem.attrib.get("font-size")
+        if y_raw is None or font_size_raw is None:
+            continue
+        try:
+            y = float(y_raw)
+            font_size = float(font_size_raw)
+        except ValueError:
+            continue
+        elem.attrib["y"] = str(y + font_size * TEXT_BASELINE_OFFSET_RATIO)
+        del elem.attrib["dominant-baseline"]
+        changed = True
+
+    if not changed:
+        return None
+
+    fd, temp_path = tempfile.mkstemp(suffix=".svg")
+    os.close(fd)
+    tree.write(temp_path, encoding="utf-8", xml_declaration=True)
+    return temp_path

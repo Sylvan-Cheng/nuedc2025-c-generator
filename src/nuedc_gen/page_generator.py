@@ -12,6 +12,7 @@ from .config import (
     ExportConfig,
     FontConfig,
     NoiseConfig,
+    OverlapConfig,
     PageConfig,
     SquareConfig,
 )
@@ -57,11 +58,14 @@ def _generate_type(
     export_cfg: ExportConfig,
     noise_cfg: NoiseConfig,
     c_exam_dir: str,
+    overlap_cfg: OverlapConfig,
 ) -> None:
     type_dir = os.path.join(c_exam_dir, type_name)
     for i in range(1, type_cfg.total_files + 1):
         filename = f"{type_name}_{i}.svg"
-        result = place_c_exam_page(page_cfg, square_cfg, digit_cfg, font_cfg, type_cfg)
+        result = place_c_exam_page(
+            page_cfg, square_cfg, digit_cfg, font_cfg, type_cfg, overlap_cfg
+        )
         generate_page(
             page_cfg,
             result.squares,
@@ -83,14 +87,17 @@ def generate_c_exam_pages(
     export_cfg: ExportConfig,
     noise_cfg: NoiseConfig,
     c_exam_dir: str,
+    overlap_cfg: OverlapConfig,
 ) -> None:
     """按 C 题标准生成 4 类发挥目标物"""
     types = [
-        ("type1_single", c_exam_cfg.type1_single, "单个正方形, 无数字, 无旋转"),
-        ("type2_multi", c_exam_cfg.type2_multi, "多正方形组合, 无数字, 无旋转"),
-        ("type3_digit", c_exam_cfg.type3_digit, "多正方形 + 数字编号, 无旋转"),
-        ("type4_rotated", c_exam_cfg.type4_rotated, "单个正方形, 随机旋转"),
+        ("type1_single", c_exam_cfg.type1_single, "1个, 无数字, 无旋转, 无重叠"),
+        ("type2_multi", c_exam_cfg.type2_multi, "2-4个, 无数字, 无旋转, 0或1对局部重叠"),
+        ("type3_digit", c_exam_cfg.type3_digit, "3-4个, 带数字, 无旋转, 0或1对局部重叠"),
+        ("type4_rotated", c_exam_cfg.type4_rotated, "1个, 无数字, 随机旋转, 无重叠"),
     ]
+
+    total = sum(type_cfg.total_files for _, type_cfg, _ in types)
 
     for type_name, type_cfg, desc in types:
         print(f"  [cyan]{type_name}[/cyan]: {desc} ({type_cfg.total_files}张)")
@@ -104,4 +111,7 @@ def generate_c_exam_pages(
             export_cfg,
             noise_cfg,
             c_exam_dir,
+            overlap_cfg,
         )
+
+    print(f"[bold green]完成: {total} 组 SVG/PDF[/bold green]")

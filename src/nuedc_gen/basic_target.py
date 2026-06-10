@@ -47,4 +47,4 @@ def generate_basic_targets(
                 save_svg_and_pdf(dwg, filename, shape_dir)
                 progress.advance(task)
 
-    print(f"[bold green]基本目标物生成完毕! 共 {total} 个文件[/bold green]")
+    print(f"[bold green]完成: {total} 组 SVG/PDF[/bold green]")
