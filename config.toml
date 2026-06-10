@@ -16,7 +16,6 @@ safe_margin_mm = 5          # 白色区域内安全边距 (mm)
 
 # ===== 字体配置 =====
 [fonts]
-paths = ["fonts/times.ttf", "fonts/arial.ttf", "fonts/consolas.ttf"]  # 字体文件路径
 enable_bold = false         # 是否生成加粗字体样本
 bold_probability = 0.3      # 每个数字的加粗概率 (enable_bold=true时生效)
 enable_multi_font = false   # 是否启用多字体 (关闭时仅使用第一个字体)
@@ -65,9 +64,8 @@ step_mm = 5                 # 尺寸间隔 (mm)
 #
 [extended_target]
 enable = true               # 是否生成发挥目标物
-difficulty = 2              # 难度级别: 0=简单, 1=中等(官方标准), 2=困难
+difficulty = 2              # 难度级别: 0=简单, 1=中等(国赛实际难度), 2=困难
 total_files = 500           # 生成图片总数
-digits_per_square = true    # 是否为每个正方形分配数字 (0-9)
 
 [extended_target.square]
 min_size_mm = 60            # 正方形最小边长 (mm), C题要求 6cm

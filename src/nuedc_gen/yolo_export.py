@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import os
 import random
-import shutil
 
 import numpy as np
 import yaml
 from PIL import Image, ImageDraw, ImageEnhance
+from rich import print
+from rich.progress import (
+    BarColumn,
+    Progress,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 from .config import AugmentConfig, FontConfig, FontSelector, YoloExportConfig
 
@@ -174,82 +181,6 @@ def _generate_digit_image(
     return img, (norm_cx, norm_cy, norm_w, norm_h)
 
 
-def _generate_noise_image(
-    image_size: int,
-    square_ratio: float = 0.8,
-    cv_noise_level: int = 5,
-    lighting_variation: bool = True,
-) -> tuple[Image.Image, list]:
-    """生成噪声样本（无数字的正方形）
-
-    Args:
-        image_size: 图片尺寸
-        square_ratio: 正方形占大图的比例 (0-1)
-        cv_noise_level: CV裁切误差（像素）
-        lighting_variation: 是否模拟光照变化
-
-    Returns:
-        图片和空边界框列表
-    """
-    # 1. 创建大尺寸白色背景（包含边距）
-    margin = random.randint(5, 20)  # 随机边距
-    large_size = image_size + margin * 2
-    img = Image.new("RGB", (large_size, large_size), (255, 255, 255))
-    draw = ImageDraw.Draw(img)
-
-    # 2. 计算正方形区域（带随机偏移，模拟CV检测误差）
-    square_size = int(large_size * square_ratio)
-    square_x = (large_size - square_size) // 2 + random.randint(
-        -cv_noise_level, cv_noise_level
-    )
-    square_y = (large_size - square_size) // 2 + random.randint(
-        -cv_noise_level, cv_noise_level
-    )
-
-    # 确保正方形在图像内
-    square_x = max(0, min(square_x, large_size - square_size))
-    square_y = max(0, min(square_y, large_size - square_size))
-
-    # 3. 绘制黑色正方形（无数字）
-    draw.rectangle(
-        [square_x, square_y, square_x + square_size, square_y + square_size],
-        fill=(0, 0, 0),
-    )
-
-    # 4. 模拟CV裁切（带误差）
-    crop_x = square_x + random.randint(-cv_noise_level, cv_noise_level)
-    crop_y = square_y + random.randint(-cv_noise_level, cv_noise_level)
-    crop_size = square_size + random.randint(-cv_noise_level, cv_noise_level)
-
-    # 确保裁切区域在图像内
-    crop_x = max(0, min(crop_x, large_size - crop_size))
-    crop_y = max(0, min(crop_y, large_size - crop_size))
-    crop_size = min(crop_size, large_size - crop_x, large_size - crop_y)
-
-    # 裁切图像
-    img = img.crop((crop_x, crop_y, crop_x + crop_size, crop_y + crop_size))
-
-    # 调整到目标大小
-    img = img.resize((image_size, image_size), Image.LANCZOS)
-
-    # 5. 模拟光照变化
-    if lighting_variation:
-        # 亮度调整
-        if random.random() < 0.5:
-            brightness_factor = random.uniform(0.7, 1.3)
-            enhancer = ImageEnhance.Brightness(img)
-            img = enhancer.enhance(brightness_factor)
-
-        # 对比度调整
-        if random.random() < 0.5:
-            contrast_factor = random.uniform(0.7, 1.3)
-            enhancer = ImageEnhance.Contrast(img)
-            img = enhancer.enhance(contrast_factor)
-
-    # 噪声样本没有标注
-    return img, []
-
-
 def _save_yolo_sample(
     yolo_dataset_dir: str,
     split: str,
@@ -298,52 +229,52 @@ def generate_yolo_dataset(
     samples_per_digit = digit_cfg.samples_per_digit
 
     print(f"[bold cyan]=== 生成YOLO数据集 ({samples_per_digit}张/数字) ===[/bold cyan]")
+    font_info = "多字体" if font_cfg.enable_multi_font else "单字体"
     print(
         f"  模拟CV裁切图像，多尺度 {image_sizes}，数字占正方形 {ratio_min * 100:.0f}%-{ratio_max * 100:.0f}%，正方形占图片 {square_ratio * 100:.0f}%"
     )
-    print(f"  数字位置随机，CV裁切误差 ±{cv_noise_level}px，光照变化，多字体")
+    print(f"  数字居中绘制，CV裁切误差 ±{cv_noise_level}px，光照变化，{font_info}")
 
-    # 生成数字样本
-    for digit in range(10):
-        print(f"  生成数字 {digit}...", end=" ")
-        count = 0
+    total_samples = 10 * samples_per_digit
+    with Progress(
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeRemainingColumn(),
+        expand=True,
+    ) as progress:
+        task = progress.add_task("[green]生成数字样本...", total=total_samples)
 
-        for i in range(samples_per_digit):
-            # 随机选择图片大小
-            image_size = random.choice(image_sizes)
-            # 随机选择数字占正方形的比例
-            digit_size_ratio = random.uniform(ratio_min, ratio_max)
+        for digit in range(10):
+            for i in range(samples_per_digit):
+                image_size = random.choice(image_sizes)
+                digit_size_ratio = random.uniform(ratio_min, ratio_max)
 
-            # 生成图片（带CV误差、光照变化、多字体）
-            img, bbox = _generate_digit_image(
-                digit,
-                image_size,
-                digit_size_ratio,
-                square_ratio,
-                cv_noise_level,
-                font_cfg,
-                lighting_variation=True,
-            )
+                img, bbox = _generate_digit_image(
+                    digit,
+                    image_size,
+                    digit_size_ratio,
+                    square_ratio,
+                    cv_noise_level,
+                    font_cfg,
+                    lighting_variation=True,
+                )
 
-            # 保存
-            split = _get_split(yolo_cfg)
-            base_name = f"digit_{digit}_{i:04d}"
-            bboxes = [(digit, *bbox)]
+                split = _get_split(yolo_cfg)
+                base_name = f"digit_{digit}_{i:04d}"
+                bboxes = [(digit, *bbox)]
 
-            _save_yolo_sample(
-                yolo_dataset_dir,
-                split,
-                base_name,
-                img,
-                bboxes,
-                augment_cfg,
-                augment=True,
-            )
-            count += 1
+                _save_yolo_sample(
+                    yolo_dataset_dir,
+                    split,
+                    base_name,
+                    img,
+                    bboxes,
+                    augment_cfg,
+                    augment=True,
+                )
+                progress.advance(task)
 
-        print(f"完成 ({count}张)")
-
-    cleanup_yolo_tmp(yolo_dataset_dir)
     print("[bold green]YOLO数据集生成完毕![/bold green]")
 
 
@@ -371,9 +302,3 @@ def init_yolo_dataset_dir(yolo_cfg: YoloExportConfig, yolo_dataset_dir: str) -> 
     with open(yaml_path, "w", encoding="utf-8") as f:
         yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
 
-
-def cleanup_yolo_tmp(yolo_dataset_dir: str) -> None:
-    """清理临时目录"""
-    tmp_dir = os.path.join(yolo_dataset_dir, "_tmp")
-    if os.path.exists(tmp_dir):
-        shutil.rmtree(tmp_dir, ignore_errors=True)

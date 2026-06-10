@@ -201,7 +201,6 @@ class FontConfig:
     bold_probability: float = 0.3
     enable_bold: bool = False
     enable_multi_font: bool = False
-    font_paths: tuple[str, ...] = ()
 
     @classmethod
     def from_raw(cls, raw: dict) -> FontConfig:
@@ -209,7 +208,6 @@ class FontConfig:
         enable_multi = font_raw.get("enable_multi_font", False)
         enable_bold = font_raw.get("enable_bold", False)
         bold_prob = font_raw.get("bold_probability", 0.3)
-        font_paths = tuple(font_raw.get("paths", []))
 
         if enable_multi:
             raw_weights = font_raw.get("weights", {})
@@ -227,7 +225,6 @@ class FontConfig:
             bold_probability=bold_prob,
             enable_bold=enable_bold,
             enable_multi_font=enable_multi,
-            font_paths=font_paths,
         )
 
 
@@ -312,7 +309,6 @@ class ExtendedTargetConfig:
     enable: bool = True
     difficulty: Difficulty = Difficulty.MEDIUM
     total_files: int = 50
-    digits_per_square: bool = True
     square: SquareConfig = field(default_factory=SquareConfig)
     digit: DigitConfig = field(default_factory=DigitConfig)
 
@@ -331,7 +327,6 @@ class ExtendedTargetConfig:
             enable=ext["enable"],
             difficulty=Difficulty(ext["difficulty"]),
             total_files=ext["total_files"],
-            digits_per_square=ext.get("digits_per_square", True),
             square=SquareConfig.from_raw(raw),
             digit=DigitConfig.from_raw(raw),
         )
