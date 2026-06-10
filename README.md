@@ -8,6 +8,26 @@
 >
 > 2025电赛C题国一。
 
+## 示例
+
+### 基本目标物
+
+| 圆形 (100mm) | 三角形 (120mm) | 正方形 (140mm) |
+|:------------:|:--------------:|:--------------:|
+| ![圆形](docs/images/basic_circle.svg) | ![三角形](docs/images/basic_triangle.svg) | ![正方形](docs/images/basic_square.svg) |
+
+### C题标准发挥目标物
+
+| type1 单个正方形 | type2 多正方形组合 | type3 带数字编号 | type4 旋转测量 |
+|:----------------:|:-----------------:|:---------------:|:--------------:|
+| ![type1](docs/images/c_exam_type1.svg) | ![type2](docs/images/c_exam_type2.svg) | ![type3](docs/images/c_exam_type3.svg) | ![type4](docs/images/c_exam_type4.svg) |
+
+### 练习用目标物
+
+| 难度0 简单 | 难度1 中等 | 难度2 困难 |
+|:----------:|:----------:|:----------:|
+| ![简单](docs/images/practice_easy.svg) | ![中等](docs/images/practice_medium.svg) | ![困难](docs/images/practice_hard.svg) |
+
 ## 功能
 
 ### 基本目标物
@@ -27,8 +47,8 @@
 | 类型 | 说明 | 正方形 | 数字 | 旋转 | 重叠 |
 |------|------|--------|------|------|------|
 | type1_single | 单个正方形 | 1个 | 无 | 无 | 无 |
-| type2_multi | 多正方形组合 | 2-4个 | 无 | 无 | 允许 |
-| type3_digit | 带数字编号 | 2-4个 | 有(0-9) | 无 | 允许 |
+| type2_multi | 多正方形组合 | 2-4个 | 无 | 无 | 允许0或1对局部重叠 |
+| type3_digit | 带数字编号 | 3-4个 | 有(0-9) | 无 | 允许0或1对局部重叠 |
 | type4_rotated | 旋转测量 | 1个 | 无 | 随机0-360° | 无 |
 
 正方形边长范围：60-120mm（C题要求6-12cm）。
@@ -39,11 +59,11 @@
 
 | 难度 | 正方形数量 | 旋转 | 重叠 | 说明 |
 |------|-----------|------|------|------|
-| 0 简单 | 1-3个 | 无 | 无，网格排列 | 入门调试 |
-| 1 中等 | 2-4个 | 无 | 最多1对，重叠≤30% | 国赛实际难度 |
-| 2 困难 | 3-5个 | 随机 | 允许，需可检测（≥2条边+1个角可见） | 算法压力测试 |
+| 0 简单 | 2-4个 | 无 | 无重叠，2个保持`gap_mm`，3-4个使用`dense_gap_mm` | 入门调试 |
+| 1 中等 | 3-4个 | 无 | 恰好1对有效重叠，重叠率5%-20% | 国赛实际难度 |
+| 2 困难 | 3-5个 | 随机 | 重叠率5%-40%，需可检测（≥2条边+1个角可见） | 算法压力测试 |
 
-难度1（中等）对应国赛实际比赛难度，建议优先使用此难度进行调试。
+难度1（中等）对应国赛实际比赛难度，建议优先使用此难度进行调试。`type3_digit` 与 `medium` 都是3-4个、带数字、无旋转；区别是 `type3_digit` 作为C题标准类型覆盖0或1对局部重叠，`medium` 作为强化练习固定恰好1对局部重叠。
 
 ### 打印指导
 
@@ -162,7 +182,9 @@ output/
 
 ## 配置
 
-所有配置在`config.toml`，运行时自动从项目根目录或当前工作目录加载。
+所有配置在`config.toml`，运行时自动从项目根目录或当前工作目录加载。也可以使用 `python -m nuedc_gen path/to/config.toml` 指定配置文件。
+
+程序每次开始生成前会清空 `global.output_dir` 指定目录下的已有内容，然后重新生成文件。请不要把 `output_dir` 指向已有重要数据目录。程序会拒绝清空空路径、当前工作目录、用户主目录和磁盘根目录。
 
 ### 全局配置
 
@@ -177,7 +199,7 @@ output_dir = "output"        # 全局输出目录
 [page]
 width_mm = 210              # A4 宽度 (mm)
 height_mm = 297             # A4 高度 (mm)
-margin_mm = 20              # 黑色边框宽度 (mm)，C题要求 2cm
+margin_mm = 20              # 纸边距：纸边缘到白色区域内边缘的距离 (mm)，C题要求 2cm
 safe_margin_mm = 5          # 白色区域内安全边距 (mm)
 ```
 
@@ -207,7 +229,7 @@ contrast_range = [0.9, 1.1]    # 对比度范围
 noise_std = 0.005           # 高斯噪声标准差
 ```
 
-数据增强仅应用于YOLO训练集，不影响练习用目标物的生成。
+数据增强仅作用于YOLO训练集，不影响练习用目标物。
 
 ### 基本目标物
 
@@ -231,11 +253,20 @@ total_files = 500           # 生成图片总数
 min_size_mm = 60            # 正方形最小边长 (mm)
 max_size_mm = 120           # 正方形最大边长 (mm)
 gap_mm = 10                 # 不重叠时的最小间距 (mm)
+dense_gap_mm = 2            # 难度0生成3-4个正方形时使用的紧凑间距 (mm)
 
 [extended_target.digit]
 font_size = 30              # 数字字体大小
 overlap_threshold_mm = 40   # 数字中心最小间距 (mm)
+
+[extended_target.overlap]
+min_ratio_medium = 0.05     # 难度1有效重叠率下限
+max_ratio_medium = 0.20     # 难度1有效重叠率上限
+min_ratio_hard = 0.05       # 难度2有效重叠率下限
+max_ratio_hard = 0.40       # 难度2有效重叠率上限
 ```
+
+练习用目标物生成后会执行约束校验：数量、边界、旋转、重叠率、间距、数字分配和可检测性必须满足对应难度要求。
 
 ### C题标准模式
 
@@ -253,7 +284,7 @@ count_max = 4
 total_files = 5
 
 [c_exam.type3_digit]        # 带数字编号（允许重叠）
-count_min = 2
+count_min = 3
 count_max = 4
 total_files = 5
 generate_digits = true
@@ -298,9 +329,9 @@ cv_noise_level = 5           # 模拟CV裁切时的像素偏移误差
 samples_per_digit = 1000     # 每个数字的样本数（总量 = 10 × 此值）
 ```
 
-数据集总样本数为 `10 × samples_per_digit`，按 `train_ratio / val_ratio / test_ratio` 比例随机分配到三个子集。
+数据集总样本数为 `10 × samples_per_digit`，按比例分配到训练集、验证集和测试集。
 
-生成时每个样本随机选择 `image_sizes` 中的一个尺寸，在 `digit_size_ratio_min` 到 `digit_size_ratio_max` 范围内随机决定数字大小。`cv_noise_level` 控制模拟的裁切位置误差，数字中心偏移不超过此像素值。内置光照变化始终生效，[augment] 配置的数据增强额外应用于训练集。
+生成时每个样本随机选择 `image_sizes` 中的一个尺寸，数字大小在 `digit_size_ratio_min` 到 `digit_size_ratio_max` 范围内随机决定。`cv_noise_level` 控制裁切位置误差（像素）。训练集会额外应用 [augment] 中的数据增强。
 
 ## 项目结构
 
@@ -334,15 +365,18 @@ geometry → (无依赖)
 
 ### 布局策略说明
 
-布局策略根据`allow_overlap`和`allow_rotation`参数自动选择：
+练习用目标物按`difficulty`选择独立策略，C题标准模式按4类官方题型独立生成，不再把`allow_overlap`和`allow_rotation`直接映射为练习难度。
 
 | 策略 | 条件 | 特点 |
 |------|------|------|
-| easy | !overlap && !rotation | 网格排列，无重叠，无旋转 |
-| medium | overlap && !rotation | 随机放置，最多1对重叠（≤30%），无旋转 |
-| hard | rotation | 随机旋转，可重叠，需满足可检测性 |
+| easy | difficulty=0 | 2-4个，无重叠，无旋转；3-4个使用紧凑间距提升可生成性 |
+| medium | difficulty=1 | 3-4个，无旋转，恰好1对5%-20%有效重叠 |
+| hard | difficulty=2 | 3-5个，随机旋转，所有重叠对必须为5%-40%，且全部可检测 |
+| c_exam | C题标准4类 | 单个、多正方形、带数字、单个旋转分别生成，不套用练习难度约束 |
 
 可检测性判断：正方形至少可见2条边和1个角。边不可与其他正方形边相交，边中点不可在其他正方形内部。
+
+SVG 使用 `dominant-baseline="central"` 居中数字。PDF 导出时会使用临时 SVG 调整文字基线，以适配 `svglib` 和 `reportlab` 的文本处理，原始 SVG 不会被修改。
 
 ## 依赖
 
@@ -355,8 +389,6 @@ geometry → (无依赖)
 | pyyaml | YAML 配置文件 |
 | numpy | 数值计算 |
 | pillow | 图像处理 |
-
-> 如果这个项目对你有帮助，欢迎给个 Star ⭐
 
 ## License
 
