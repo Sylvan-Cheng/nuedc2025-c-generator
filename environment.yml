@@ -1,0 +1,16 @@
+name: nuedc2025
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python>=3.12
+  - pip
+  - pip:
+    - svgwrite>=1.4
+    - resvg-py>=0.3
+    - svglib>=1.6
+    - reportlab>=4.0
+    - rich>=13.0
+    - pyyaml>=6.0
+    - numpy>=1.24
+    - pillow>=10.0
