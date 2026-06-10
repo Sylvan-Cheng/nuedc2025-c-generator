@@ -28,6 +28,23 @@
 |:----------:|:----------:|:----------:|
 | ![简单](docs/images/practice_easy.svg) | ![中等](docs/images/practice_medium.svg) | ![困难](docs/images/practice_hard.svg) |
 
+### YOLO数字识别数据集
+
+<table>
+<tr>
+<td align="center"><img src="docs/images/yolo/yolo_0.png" width="80"><br>64px, -2.7°, 0.8</td>
+<td align="center"><img src="docs/images/yolo/yolo_1.png" width="80"><br>256px, -2.4°, 0.1</td>
+<td align="center"><img src="docs/images/yolo/yolo_2.png" width="80"><br>256px, 3.3°, 0.2</td>
+<td align="center"><img src="docs/images/yolo/yolo_3.png" width="80"><br>256px, 2.8°, 0.3</td>
+</tr>
+<tr>
+<td align="center"><img src="docs/images/yolo/yolo_4.png" width="80"><br>64px, -0.7°, 0.7</td>
+<td align="center"><img src="docs/images/yolo/yolo_5.png" width="80"><br>256px, 1.8°, 0.1</td>
+<td align="center"><img src="docs/images/yolo/yolo_6.png" width="80"><br>128px, -3.5°, 1.0</td>
+<td align="center"><img src="docs/images/yolo/yolo_7.png" width="80"><br>128px, 4.8°, 0.7</td>
+</tr>
+</table>
+
 ## 功能
 
 ### 基本目标物
@@ -80,11 +97,7 @@
 
 ### YOLO数字识别数据集
 
-生成用于YOLO训练的数字识别数据集，模拟CV裁切后的图像。图像为白色背景上的黑色正方形，内含白色数字。支持多尺度裁切（64/128/256px）、模拟CV误差（位置偏移±5px）、光照变化、多字体（Times New Roman、Arial、Consolas），训练集额外应用旋转和噪声增强。
-
-| 类别 | 说明 |
-|------|------|
-| 0-9 | 数字类别 |
+生成用于YOLO训练的数字识别数据集，模拟CV裁切后的图像。图像为白色背景上的黑色正方形，内含白色数字。支持多尺度裁切（64/128/256px）、模拟CV误差（位置偏移±5px）、光照变化、随机旋转（±5°）、高斯噪声、多字体（Times New Roman、Arial、Consolas），训练集额外应用旋转和噪声增强。
 
 #### 裁切尺寸设计依据
 
@@ -332,59 +345,6 @@ samples_per_digit = 1000     # 每个数字的样本数（总量 = 10 × 此值�
 数据集总样本数为 `10 × samples_per_digit`，按比例分配到训练集、验证集和测试集。
 
 生成时每个样本随机选择 `image_sizes` 中的一个尺寸，数字大小在 `digit_size_ratio_min` 到 `digit_size_ratio_max` 范围内随机决定。`cv_noise_level` 控制裁切位置误差（像素）。训练集会额外应用 [augment] 中的数据增强。
-
-## 项目结构
-
-```
-src/nuedc_gen/
-├── __init__.py
-├── __main__.py       — 入口，生成循环
-├── config.py         — 配置加载 + 数据类型 + 字体选择
-├── geometry.py       — Square 类 + 几何算法（碰撞检测、可检测性判断）
-├── digit.py          — 数字分配（6/9互斥、重叠检测）
-├── placement.py      — 正方形布局策略（easy/medium/hard + C题标准）
-├── renderer.py       — SVG 构建（背景、正方形、数字、基本图形）
-├── export.py         — SVG→PNG/PDF 导出
-├── page_generator.py — 页面生成管线（渲染→导出→保存）
-├── basic_target.py   — 基本目标物生成
-└── yolo_export.py    — YOLO数据集生成
-```
-
-### 模块依赖
-
-```
-__main__ → config, page_generator, placement, basic_target, yolo_export
-page_generator → config, renderer, export, placement
-placement → config, geometry, digit
-renderer → config, geometry, digit
-export → config, geometry, digit
-yolo_export → config
-digit → config
-geometry → (无依赖)
-```
-
-### 布局策略说明
-
-练习用目标物按`difficulty`选择独立策略，C题标准模式按4类官方题型独立生成。
-
-| 策略 | 条件 | 特点 |
-|------|------|------|
-| easy | difficulty=0 | 2-4个，无重叠，无旋转 |
-| medium | difficulty=1 | 3-4个，无旋转，1对重叠 |
-| hard | difficulty=2 | 3-5个，随机旋转，多对重叠 |
-| c_exam | C题标准4类 | 按官方题型生成 |
-
-## 依赖
-
-| 包 | 用途 |
-|----|------|
-| svgwrite | SVG 生成 |
-| resvg-py | SVG→PNG 渲染 |
-| svglib + reportlab | SVG→PDF 转换 |
-| rich | 进度条显示 |
-| pyyaml | YAML 配置文件 |
-| numpy | 数值计算 |
-| pillow | 图像处理 |
 
 ## License
 
