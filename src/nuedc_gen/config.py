@@ -36,17 +36,17 @@ def load_config(path: Path | None = None) -> dict:
 class Difficulty(IntEnum):
     """发挥目标物难度级别"""
 
-    EASY = 0  # 1-3个正方形，不旋转，不重叠，平均分布
-    MEDIUM = 1  # 2-4个正方形，不旋转，最多1对重叠，其余留间距
-    HARD = 2  # 3-5个正方形，随机旋转，可重叠
+    EASY = 0  # 2-4个正方形，不旋转，不重叠
+    MEDIUM = 1  # 3-4个正方形，不旋转，至少1对重叠，重叠率可配置（默认≤20%）
+    HARD = 2  # 3-5个正方形，随机旋转，重叠率可配置（默认≤40%）
 
     @property
     def min_count(self) -> int:
-        return {0: 1, 1: 2, 2: 3}[self.value]
+        return {0: 2, 1: 3, 2: 3}[self.value]
 
     @property
     def max_count(self) -> int:
-        return {0: 3, 1: 4, 2: 5}[self.value]
+        return {0: 4, 1: 4, 2: 5}[self.value]
 
 
 # ===== 全局配置 =====
@@ -130,6 +130,15 @@ class SquareConfig:
     min_size_mm: int = 60
     max_size_mm: int = 120
     gap_mm: float = 10.0
+    dense_gap_mm: float = 2.0
+
+    def __post_init__(self) -> None:
+        if self.min_size_mm <= 0 or self.max_size_mm <= 0:
+            raise ValueError("extended_target.square size values must be positive")
+        if self.min_size_mm > self.max_size_mm:
+            raise ValueError("extended_target.square.min_size_mm must be <= max_size_mm")
+        if self.gap_mm < 0 or self.dense_gap_mm < 0:
+            raise ValueError("extended_target.square gap values must be non-negative")
 
     @classmethod
     def from_raw(cls, raw: dict) -> SquareConfig:
@@ -138,6 +147,7 @@ class SquareConfig:
             min_size_mm=sq["min_size_mm"],
             max_size_mm=sq["max_size_mm"],
             gap_mm=sq["gap_mm"],
+            dense_gap_mm=sq.get("dense_gap_mm", 2.0),
         )
 
 
@@ -151,6 +161,44 @@ class DigitConfig:
         dg = raw["extended_target"]["digit"]
         return cls(
             font_size=dg["font_size"], overlap_threshold_mm=dg["overlap_threshold_mm"]
+        )
+
+
+@dataclass(frozen=True)
+class OverlapConfig:
+    """各难度的重叠率配置"""
+
+    min_ratio_easy: float = 0.0
+    max_ratio_easy: float = 0.0
+    min_ratio_medium: float = 0.05
+    max_ratio_medium: float = 0.20
+    min_ratio_hard: float = 0.05
+    max_ratio_hard: float = 0.40
+
+    def __post_init__(self) -> None:
+        ranges = {
+            "easy": (self.min_ratio_easy, self.max_ratio_easy),
+            "medium": (self.min_ratio_medium, self.max_ratio_medium),
+            "hard": (self.min_ratio_hard, self.max_ratio_hard),
+        }
+        for name, (min_ratio, max_ratio) in ranges.items():
+            if min_ratio < 0 or max_ratio < 0 or min_ratio > 1 or max_ratio > 1:
+                raise ValueError(f"extended_target.overlap {name} ratios must be in [0, 1]")
+            if min_ratio > max_ratio:
+                raise ValueError(
+                    f"extended_target.overlap min_ratio_{name} must be <= max_ratio_{name}"
+                )
+
+    @classmethod
+    def from_raw(cls, raw: dict) -> OverlapConfig:
+        overlap_raw = raw.get("extended_target", {}).get("overlap", {})
+        return cls(
+            min_ratio_easy=overlap_raw.get("min_ratio_easy", 0.0),
+            max_ratio_easy=overlap_raw.get("max_ratio_easy", 0.0),
+            min_ratio_medium=overlap_raw.get("min_ratio_medium", 0.05),
+            max_ratio_medium=overlap_raw.get("max_ratio_medium", 0.20),
+            min_ratio_hard=overlap_raw.get("min_ratio_hard", 0.05),
+            max_ratio_hard=overlap_raw.get("max_ratio_hard", 0.40),
         )
 
 
@@ -311,6 +359,7 @@ class ExtendedTargetConfig:
     total_files: int = 50
     square: SquareConfig = field(default_factory=SquareConfig)
     digit: DigitConfig = field(default_factory=DigitConfig)
+    overlap: OverlapConfig = field(default_factory=OverlapConfig)
 
     @property
     def min_count(self) -> int:
@@ -329,6 +378,7 @@ class ExtendedTargetConfig:
             total_files=ext["total_files"],
             square=SquareConfig.from_raw(raw),
             digit=DigitConfig.from_raw(raw),
+            overlap=OverlapConfig.from_raw(raw),
         )
 
 
@@ -346,6 +396,20 @@ class CExamTypeConfig:
     generate_digits: bool = False
     allow_overlap: bool = False
     allow_rotation: bool = False
+
+    def __post_init__(self) -> None:
+        if self.count is not None and self.count <= 0:
+            raise ValueError("c_exam count must be positive")
+        if self.count_min is not None and self.count_min <= 0:
+            raise ValueError("c_exam count_min must be positive")
+        if self.count_max is not None and self.count_max <= 0:
+            raise ValueError("c_exam count_max must be positive")
+        if (
+            self.count_min is not None
+            and self.count_max is not None
+            and self.count_min > self.count_max
+        ):
+            raise ValueError("c_exam count_min must be <= count_max")
 
     @property
     def effective_min(self) -> int:
@@ -369,7 +433,7 @@ class CExamConfig:
     )
     type3_digit: CExamTypeConfig = field(
         default_factory=lambda: CExamTypeConfig(
-            count_min=2,
+            count_min=3,
             count_max=4,
             total_files=5,
             generate_digits=True,
@@ -381,6 +445,18 @@ class CExamConfig:
             count=1, total_files=5, allow_rotation=True
         )
     )
+
+    def __post_init__(self) -> None:
+        for name, type_cfg in (
+            ("type1_single", self.type1_single),
+            ("type2_multi", self.type2_multi),
+            ("type3_digit", self.type3_digit),
+            ("type4_rotated", self.type4_rotated),
+        ):
+            if type_cfg.allow_rotation and type_cfg.effective_max > 1:
+                raise ValueError(
+                    f"c_exam.{name} cannot enable rotation for multiple squares"
+                )
 
     @classmethod
     def from_raw(cls, raw: dict) -> CExamConfig:
@@ -423,7 +499,7 @@ class CExamConfig:
             type3_digit=_parse_type(
                 "type3_digit",
                 {
-                    "count_min": 2,
+                    "count_min": 3,
                     "count_max": 4,
                     "total_files": 5,
                     "generate_digits": True,

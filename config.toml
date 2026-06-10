@@ -11,7 +11,7 @@ output_dir = "output"        # 全局输出目录
 [page]
 width_mm = 210              # A4 宽度 (mm)
 height_mm = 297             # A4 高度 (mm)
-margin_mm = 20              # 黑色边框宽度 (mm), C题要求 2cm
+margin_mm = 20              # 纸边距：纸边缘到白色区域内边缘的距离 (mm), C题要求 2cm
 safe_margin_mm = 5          # 白色区域内安全边距 (mm)
 
 # ===== 字体配置 =====
@@ -45,22 +45,23 @@ step_mm = 5                 # 尺寸间隔 (mm)
 #
 # 难度级别说明:
 #   difficulty = 0 (简单)
-#     - 正方形数量: 1-3个
-#     - 旋转: 无 (角度固定为0°)
-#     - 重叠: 无 (正方形之间保持 gap_mm 间距)
-#     - 布局: 平均分布于页面 (网格排列)
-#
-#   difficulty = 1 (中等)
 #     - 正方形数量: 2-4个
 #     - 旋转: 无 (角度固定为0°)
-#     - 重叠: 最多允许1对正方形重叠
+#     - 重叠: 无 (2个时保持 gap_mm 间距，3-4个时使用 dense_gap_mm 提高可生成性)
+#     - 布局: 随机大小，随机位置
+#
+#   difficulty = 1 (中等)
+#     - 正方形数量: 3-4个
+#     - 旋转: 无 (角度固定为0°)
+#     - 重叠: 至少1对重叠，重叠率≤20%
 #     - 布局: 随机放置, 非重叠正方形保持 gap_mm 间距
 #
 #   difficulty = 2 (困难)
 #     - 正方形数量: 3-5个
 #     - 旋转: 随机 (0°-360°)
-#     - 重叠: 允许 (需满足可检测性: 至少2条边+1个角可见)
-#     - 布局: 随机放置
+#     - 重叠: 重叠率≤40% (大于难度1的20%)
+#     - 可检测性: 至少2条边+1个角可见
+#     - 布局: 随机放置，无降级策略
 #
 [extended_target]
 enable = true               # 是否生成发挥目标物
@@ -71,10 +72,20 @@ total_files = 500           # 生成图片总数
 min_size_mm = 60            # 正方形最小边长 (mm), C题要求 6cm
 max_size_mm = 120           # 正方形最大边长 (mm), C题要求 12cm
 gap_mm = 10                 # 不重叠时的最小间距 (mm), 仅难度0和1生效
+dense_gap_mm = 2            # 难度0生成3-4个正方形时使用的紧凑间距 (mm)
 
 [extended_target.digit]
 font_size = 30              # 数字字体大小 (SVG 单位)
 overlap_threshold_mm = 40   # 数字中心最小间距 (mm), 防止数字重叠
+
+# 重叠率配置（可调整）
+# 难度0不允许重叠，无需配置
+# 难度1/2必须至少1对重叠
+[extended_target.overlap]
+min_ratio_medium = 0.05     # 难度1最小重叠率 (5%)
+max_ratio_medium = 0.20     # 难度1最大重叠率 (20%)
+min_ratio_hard = 0.05       # 难度2最小重叠率 (5%)
+max_ratio_hard = 0.40       # 难度2最大重叠率 (40%)
 
 # ===== C 题标准模式（恰好4类发挥目标物） =====
 #
@@ -103,7 +114,7 @@ allow_overlap = true
 allow_rotation = false
 
 [c_exam.type3_digit]
-count_min = 2
+count_min = 3
 count_max = 4
 total_files = 5
 generate_digits = true
