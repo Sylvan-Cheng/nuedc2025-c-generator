@@ -5,7 +5,7 @@
 
 # ===== 全局配置 =====
 [global]
-output_dir = "output"        # 全局输出目录
+output_dir = "."        # 全局输出目录
 
 # ===== 页面设置 =====
 [page]
@@ -65,7 +65,7 @@ step_mm = 5                 # 尺寸间隔 (mm)
 #
 [extended_target]
 enable = true               # 是否生成发挥目标物
-difficulty = 2              # 难度级别: 0=简单, 1=中等(国赛实际难度), 2=困难
+difficulty = 1              # 难度级别: 0=简单, 1=中等(国赛实际难度), 2=困难
 total_files = 500           # 生成图片总数
 
 [extended_target.square]

@@ -52,6 +52,8 @@ def main() -> None:
         _run(config_path)
     except KeyboardInterrupt:
         print("\n[yellow]用户取消[/yellow]")
+    except ValueError as e:
+        print(f"\n[red]配置错误: {e}[/red]")
 
 
 def _run(config_path: Path | None = None) -> None:
@@ -184,6 +186,11 @@ def _clear_output_dir(output_dir: str) -> None:
     protected = {cwd, home, root}
     if target in protected:
         raise ValueError(f"refusing to clear protected output directory: {target}")
+
+    if not target.is_relative_to(cwd):
+        raise ValueError(
+            f"global.output_dir must be a subdirectory of the working directory: {target}"
+        )
 
     target.mkdir(parents=True, exist_ok=True)
     for child in target.iterdir():
